@@ -1,9 +1,13 @@
-import FamilyTree from "@/components/family-tree/family-tree";
+import { FamilyTreeContent } from "@/components/family-tree/family-tree-content";
+import { FamilyProvider } from "@/context/FamilyContext";
 
-export default function Page() {
+export default function FamilyPage() {
   return (
-    <div className="p-6">
-      <FamilyTree />
-    </div>
-  );
+    <FamilyProvider>
+      <div className="min-h-screen flex flex-col bg-background">
+        {/* <FamilyControls /> */}
+        <FamilyTreeContent />
+      </div>
+    </FamilyProvider>
+  )
 }
