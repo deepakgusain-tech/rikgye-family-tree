@@ -13,7 +13,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         strategy: "jwt" as const,
         maxAge: 30 * 24 * 60 * 60
     },
-    adapter: PrismaAdapter(prisma),
+    adapter: PrismaAdapter(prisma) as any,
     providers: [
         CredentialsProvider({
             credentials: {
@@ -63,7 +63,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         async session({ session, user, trigger, token }: any) {
             // set the user id from the token
             session.user.id = token.sub
-            session.user.role = token.role
+            session.user.role = token.role as string
             session.user.name = token.name
             session.user.email = token.email
 
@@ -78,7 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         async jwt({ token, user, trigger, session }: any) {
             if (user) {
                 token.id = user.id;
-                token.role = user.role;
+                token.role = user.role
                 token.name = user.name;
                 token.email = user.email;
 
