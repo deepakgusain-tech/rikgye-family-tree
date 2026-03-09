@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 type SettingsBody = {
+  id?: string;
   siteTitle?: string;
   siteKeywords?: string;
   siteDescription?: string;
@@ -16,12 +17,10 @@ type SettingsBody = {
   auth?: boolean;
   encryption?: string;
 };
- 
+
 export async function GET() {
   try {
-    const settings = await prisma.settings.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const settings = await prisma.settings.findFirst();
 
     return NextResponse.json(settings);
   } catch (error) {
@@ -33,19 +32,36 @@ export async function GET() {
   }
 }
 
- 
+
 export async function POST(req: Request) {
   try {
     const body: SettingsBody = await req.json();
 
-    const created = await prisma.settings.create({
-      data: {
-        isSMTP: false,
-        ...body,
-      },
-    });
+    let updated = false;
 
-    return NextResponse.json(created, { status: 201 });
+    if (body.id !== "") {
+      await prisma.settings.update({
+        where: { id: body.id },
+        data: {
+          isSMTP: false,
+          ...body,
+        },
+      });
+
+      updated = true;
+    } else {
+      await prisma.settings.create({
+        data: {
+          isSMTP: false,
+          ...body,
+        },
+      });
+    }
+  
+
+    return NextResponse.json(
+      updated ? { message: "Settings updated successfully" } : { message: "Settings created successfully" }
+    , {status: 200});
   } catch (error) {
     console.error("CREATE SETTINGS ERROR:", error);
     return NextResponse.json(
@@ -54,7 +70,7 @@ export async function POST(req: Request) {
     );
   }
 }
- 
+
 export async function PUT(req: Request) {
   try {
     const { id, ...body } = await req.json();
@@ -65,7 +81,7 @@ export async function PUT(req: Request) {
         { status: 400 }
       );
     }
- 
+
     const existing = await prisma.settings.findUnique({
       where: { id },
     });
@@ -91,7 +107,7 @@ export async function PUT(req: Request) {
     );
   }
 }
- 
+
 export async function DELETE(req: Request) {
   try {
     const { id } = await req.json();

@@ -32,7 +32,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { IconDashboard, IconPageBreak, IconUser } from "@tabler/icons-react"
+import { IconAddressBook, IconDashboard, IconPageBreak, IconSitemap, IconUser } from "@tabler/icons-react"
 import { Collapsible, CollapsibleTrigger } from "./ui/collapsible"
 import { Logo } from "./ui/logo-collapse"
 
@@ -65,13 +65,18 @@ const data = {
     {
       title: "Families",
       url: "/admin/familes",
-      icon: TreesIcon,
+      icon: IconSitemap,
       isActive: true,
     },
-
+    {
+      title: "Find Rikhye",
+      url: "/admin/findmember",
+      icon: IconAddressBook,
+      isActive: true,
+    },
     {
       title: "Pages",
-      url: "/admin/pages",
+      url: "/admin/cms",
       icon: IconPageBreak,
       isActive: true,
     },

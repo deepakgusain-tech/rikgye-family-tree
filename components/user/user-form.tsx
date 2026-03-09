@@ -43,6 +43,7 @@ const UserForm = ({ data, update = false }: UserFormProps) => {
             if (values.avatar instanceof File) {
                 const formData = new FormData();
                 formData.append("avatar", values.avatar);
+                formData.append("key", "avatar");
 
                 const fileUploadRes = await fetch("/api/upload", {
                     method: "POST",

@@ -14,3 +14,13 @@ export const userDefaultValues = {
     status: Status.ACTIVE,
     role: Role.USER,
 };
+
+
+export const cmsDefaultValues = {
+    pageTitle: "",
+    pageContent: "",
+    pageIcon: "",
+    status: Status.ACTIVE,
+
+};
+

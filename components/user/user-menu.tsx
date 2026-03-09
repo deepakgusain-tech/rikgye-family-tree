@@ -8,8 +8,6 @@ import defaultImage from "@/assets/images/no_profile_pic.jpg";
 import Link from 'next/link';
 
 const UserMenu = ({ user }: { user: any }) => {
-    console.log(user);
-    console.log(defaultImage);
     let image = defaultImage;
 
     if(user.image) {

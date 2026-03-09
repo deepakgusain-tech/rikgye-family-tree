@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -22,10 +22,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { set } from "zod";
 
 type Tab = "general" | "mail";
 
 type SettingsForm = {
+  id: string;
   siteTitle: string;
   siteKeywords: string;
   siteDescription: string;
@@ -41,6 +43,7 @@ type SettingsForm = {
 
 export default function SettingsPage() {
   const [formData, setFormData] = useState<SettingsForm>({
+    id: "",
     siteTitle: "",
     siteKeywords: "",
     siteDescription: "",
@@ -60,12 +63,39 @@ export default function SettingsPage() {
 
   const tabs: readonly Tab[] = ["general", "mail"];
 
+  const getData = async () => {
+    try {
+      const res = await fetch("/api/settings");
+
+      let data = await res.json();
+
+      if (data) {
+        setFormData({
+          id: data.id,
+          siteTitle: data.siteTitle,
+          siteKeywords: data.siteKeywords,
+          siteDescription: data.siteDescription,
+          siteUrl: data.siteUrl,
+          isSMTP: data.isSMTP,
+          host: data.host,
+          username: data.username,
+          password: data.password,
+          port: data.port,
+          auth: data.auth,
+          encryption: data.encryption,
+        })
+      }
+    } catch (err) {
+      console.error("FETCH ERROR:", err);
+    }
+  }
+
   const handleSave = async () => {
     setLoading(true);
 
     try {
       const res = await fetch("/api/settings", {
-        method: "POST", 
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
@@ -77,20 +107,6 @@ export default function SettingsPage() {
       }
 
       setOpen(true);
- 
-      setFormData({
-        siteTitle: "",
-        siteKeywords: "",
-        siteDescription: "",
-        siteUrl: "",
-        isSMTP: false,
-        host: "",
-        username: "",
-        password: "",
-        port: null,
-        auth: false,
-        encryption: "none",
-      });
 
     } catch (err) {
       console.error("SAVE ERROR:", err);
@@ -99,11 +115,15 @@ export default function SettingsPage() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    getData();
+  }, []);
+
   return (
     <div className="bg-gray-50 py-5 px-0 min-h-screen">
       <div className="w-full mx-auto">
         <Card className="shadow-sm border bg-white">
-          
+
           <div className="px-8 py-2 border-b">
             <h1 className="text-2xl font-semibold">Settings</h1>
             <p className="text-sm text-muted-foreground mt-2">
@@ -116,11 +136,10 @@ export default function SettingsPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-4 text-sm font-medium capitalize ${
-                  activeTab === tab
-                    ? "border-b-2 border-black text-black"
-                    : "text-muted-foreground"
-                }`}
+                className={`pb-4 text-sm font-medium capitalize ${activeTab === tab
+                  ? "border-b-2 border-black text-black"
+                  : "text-muted-foreground"
+                  }`}
               >
                 {tab}
               </button>
@@ -131,41 +150,53 @@ export default function SettingsPage() {
 
             {activeTab === "general" && (
               <div className="space-y-6">
-                <Input
-                  placeholder="Site Title"
-                  value={formData.siteTitle}
-                  onChange={(e) =>
-                    setFormData({ ...formData, siteTitle: e.target.value })
-                  }
-                />
+                <div className="space-y-2">
+                  <label>Site Title</label>
+                  <Input
+                    placeholder="Site Title"
+                    value={formData.siteTitle}
+                    onChange={(e) =>
+                      setFormData({ ...formData, siteTitle: e.target.value })
+                    }
+                  />
+                </div>
 
-                <Input
-                  placeholder="Site URL"
-                  value={formData.siteUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, siteUrl: e.target.value })
-                  }
-                />
+                <div>
+                  <label>Site URL</label>
+                  <Input
+                    placeholder="Site URL"
+                    value={formData.siteUrl}
+                    onChange={(e) =>
+                      setFormData({ ...formData, siteUrl: e.target.value })
+                    }
+                  />
+                </div>
 
-                <Input
-                  placeholder="Keywords"
-                  value={formData.siteKeywords}
-                  onChange={(e) =>
-                    setFormData({ ...formData, siteKeywords: e.target.value })
-                  }
-                />
+                <div>
+                  <label>Site Keywords</label>
+                  <Input
+                    placeholder="Keywords"
+                    value={formData.siteKeywords}
+                    onChange={(e) =>
+                      setFormData({ ...formData, siteKeywords: e.target.value })
+                    }
+                  />
+                </div>
 
-                <Textarea
-                  rows={4}
-                  placeholder="Description"
-                  value={formData.siteDescription}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      siteDescription: e.target.value,
-                    })
-                  }
-                />
+                <div>
+                  <label>Site Description</label>
+                  <Textarea
+                    rows={4}
+                    placeholder="Description"
+                    value={formData.siteDescription}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        siteDescription: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
             )}
 
@@ -182,87 +213,105 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Input
-                  placeholder="Host"
-                  disabled={!formData.isSMTP}
-                  value={formData.host}
-                  onChange={(e) =>
-                    setFormData({ ...formData, host: e.target.value })
-                  }
-                />
+                <div className="space-y-2">
+                  <label>SMTP Host</label>
+                  <Input
+                    placeholder="Host"
+                    disabled={!formData.isSMTP}
+                    value={formData.host}
+                    onChange={(e) =>
+                      setFormData({ ...formData, host: e.target.value })
+                    }
+                  />
+                </div>
 
-                <Input
-                  placeholder="Username"
-                  disabled={!formData.isSMTP}
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                />
+                <div className="space-y-2">
+                  <label>SMTP Username</label>
+                  <Input
+                    placeholder="Username"
+                    disabled={!formData.isSMTP}
+                    value={formData.username}
+                    onChange={(e) =>
+                      setFormData({ ...formData, username: e.target.value })
+                    }
+                  />
+                </div>
 
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  disabled={!formData.isSMTP}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                />
+                <div className="space-y-2">
+                  <label>SMTP Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    disabled={!formData.isSMTP}
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                  />
+                </div>
 
-                <Input
-                  type="number"
-                  placeholder="Port"
-                  disabled={!formData.isSMTP}
-                  value={formData.port ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      port: e.target.value
-                        ? Number(e.target.value)
-                        : null,
-                    })
-                  }
-                />
+                <div className="space-y-2">
+                  <label>SMTP Port</label>
+                  <Input
+                    type="number"
+                    placeholder="Port"
+                    disabled={!formData.isSMTP}
+                    value={formData.port ?? ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        port: e.target.value
+                          ? Number(e.target.value)
+                          : null,
+                      })
+                    }
+                  />
+                </div>
 
-                <Select
-                  disabled={!formData.isSMTP}
-                  value={formData.auth ? "true" : "false"}
-                  onValueChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      auth: val === "true",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Auth Enabled</SelectItem>
-                    <SelectItem value="false">Auth Disabled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <label>Auth</label>
+                  <Select
+                    disabled={!formData.isSMTP}
+                    value={formData.auth ? "true" : "false"}
+                    onValueChange={(val) =>
+                      setFormData({
+                        ...formData,
+                        auth: val === "true",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Auth Enabled</SelectItem>
+                      <SelectItem value="false">Auth Disabled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <Select
-                  disabled={!formData.isSMTP}
-                  value={formData.encryption}
-                  onValueChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      encryption: val,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="tls">TLS</SelectItem>
-                    <SelectItem value="ssl">SSL</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <label>Encryption</label>
+                  <Select
+                    disabled={!formData.isSMTP}
+                    value={formData.encryption}
+                    onValueChange={(val) =>
+                      setFormData({
+                        ...formData,
+                        encryption: val,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="tls">TLS</SelectItem>
+                      <SelectItem value="ssl">SSL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
 

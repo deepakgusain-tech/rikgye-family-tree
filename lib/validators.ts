@@ -21,6 +21,19 @@ export const userSchema = z.object({
 
 // sign-in schema
 export const loginFormSchema = z.object({
-    username: z.string("Invalid Username"),
-    password: z.string().min(6, "Password should be at least 6 characters long")
+  username: z.string("Invalid Username"),
+  password: z.string().min(6, "Password should be at least 6 characters long")
 })
+
+export const cmsSchema = z.object({
+  id: z.string().optional(),
+  pageTitle: z.string().min(1, "Page Title is required"),
+  pageIcon: z.union([
+    z.instanceof(File),
+    z.string().min(1)
+  ]),
+  pageContent: z.string().min(1, "Page Content is required"),
+  status: z.enum(Object.values(Status)),
+  createdAt: z.date().nullable().optional(),
+  updatedAt: z.date().nullable().optional(),
+});

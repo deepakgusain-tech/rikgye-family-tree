@@ -8,10 +8,7 @@ export async function POST(req: Request) {
 
     const data = Object.fromEntries(formData.entries())    
 
-    const file = formData.get("avatar") as File;
-
-    console.log(file);
-    
+    const file = formData.get(data.key as string) as File;    
 
     if (!file) {
         return NextResponse.json({ message: "No image uploaded" }, { status: 400 });
