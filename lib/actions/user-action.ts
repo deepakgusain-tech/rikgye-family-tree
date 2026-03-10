@@ -174,6 +174,7 @@ export async function loginFormUser(prevState: unknown, formData: FormData) {
       const session = await auth()
 
       if(session?.user?.role === Role.USER) {
+         // fix url
          redirect("/home")
       }else {
          redirect("/admin/home")
