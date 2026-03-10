@@ -113,7 +113,6 @@ export function ForgotPasswordForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
