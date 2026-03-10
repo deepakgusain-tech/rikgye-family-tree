@@ -84,6 +84,32 @@ export async function getUserById(id: string) {
    }
 }
 
+// validate user
+export async function validateUser(identifier: string) {
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: identifier },
+          { email: identifier }
+        ]
+      }
+    });
+
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+
+    return { success: true, data: user };
+
+  } catch (error) {
+    return {
+      success: false,
+      message: formatError(error)
+    };
+  }
+}
+
 // update user
 export async function updateUser(data: User, id: string) {
    try {
