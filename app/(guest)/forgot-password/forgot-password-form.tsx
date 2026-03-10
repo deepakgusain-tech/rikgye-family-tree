@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { validateUser } from "@/lib/actions/user-action";
+import { forgotPasword, validateUser } from "@/lib/actions/user-action";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,16 @@ export function ForgotPasswordForm({
       return;
     }
 
-    setMessage("User found. Continue reset password.");
+    let res = await forgotPasword(result.data)
+
+     if (!res.success) {
+      setMessage(res.message);
+      return;
+    }
+     
+    setMessage("");
+
+    
   };
 
   return (
