@@ -9,6 +9,7 @@ import { auth, signIn, signOut } from "@/auth";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
 import { Role } from "../generated/prisma/enums";
+import { sendMail } from "../mail";
 
 
 
@@ -86,28 +87,28 @@ export async function getUserById(id: string) {
 
 // validate user
 export async function validateUser(identifier: string) {
-  try {
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: identifier },
-          { email: identifier }
-        ]
+   try {
+      const user = await prisma.user.findFirst({
+         where: {
+            OR: [
+               { username: identifier },
+               { email: identifier }
+            ]
+         }
+      });
+
+      if (!user) {
+         return { success: false, message: "User not found" };
       }
-    });
 
-    if (!user) {
-      return { success: false, message: "User not found" };
-    }
+      return { success: true, data: user };
 
-    return { success: true, data: user };
-
-  } catch (error) {
-    return {
-      success: false,
-      message: formatError(error)
-    };
-  }
+   } catch (error) {
+      return {
+         success: false,
+         message: formatError(error)
+      };
+   }
 }
 
 // update user
@@ -246,4 +247,30 @@ export async function logoutUser() {
          message: "Something went wrong"
       }
    }
+}
+
+
+export async function forgotPasword(user: any) {
+   // try {
+      await sendMail({
+         to: user.email as string,
+         subject: "Forgot Password",
+         html: `
+         Please click the link to reset the password
+         <a href="${process.env.NEXT_APP_SERVER_URL + "/reset-password/" + user.id}">reset password</a>
+        `,
+      });
+
+      return {
+         success: true,
+         message: "Please check your inbox"
+      }
+   // } catch (error) {
+   //    return {
+   //       success: false,
+   //       message: "Something went wrong"
+   //    }
+   // }
+
+
 }
