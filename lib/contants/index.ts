@@ -1,4 +1,4 @@
-import { Role, Status } from "../generated/prisma/enums";
+import { Gender, Role, Status } from "../generated/prisma/enums";
 
 export const APP_NAME = process.env.NEXT_APP_APP_NAME ?? "Rikhye Family tree";
 export const APP_DESCRIPTION = process.env.NEXT_APP_DESCRIPTION ?? "Rikhye Family tree";
@@ -24,3 +24,26 @@ export const cmsDefaultValues = {
 
 };
 
+export const familyMemberDefaultValues = {
+    name: "",
+    image: "",
+    gender: Gender.MALE,
+    birthDate: "",
+    birthPlace: "",
+    isAlive: true,
+    currentResidence: "",
+    deathDate: "",
+    deathPlace: "",
+    causeOfDeath: "",
+    spouseName: "",
+    marriageDate: "",
+    marriagePlace: "",
+    spouseMaidenName: "",
+    spouseFather: "",
+    spouseMother: "",
+    profession: "",
+    email: "",
+    phone: "",
+    parentId: null,
+    userId: null,
+}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react"
 import "leaflet/dist/leaflet.css";
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
-import L from "leaflet"
+
 
 const members = [
   {

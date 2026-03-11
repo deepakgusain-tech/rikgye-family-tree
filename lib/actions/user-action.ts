@@ -8,7 +8,6 @@ import { formatError } from "../utils";
 import { auth, signIn, signOut } from "@/auth";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
-import { Role } from "../generated/prisma/enums";
 import { sendMail } from "../mail";
 import bcrypt from "bcrypt"
 
@@ -314,10 +313,4 @@ export async function updatePassword(userId: string, password: string) {
       }
    }
 
-
 }
-
-
-
-
-

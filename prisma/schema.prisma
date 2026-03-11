@@ -46,16 +46,29 @@ model User {
 
 model FamilyMember {
   id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  image  String
   name   String
-  role   String?
+
   gender Gender?
+  birthDate   DateTime?
+  birthPlace  String?
+  isAlive Boolean @default(true)
+  currentResidence String?
 
-  birthDate  DateTime?
-  birthPlace String?
+  deathDate    DateTime?
+  deathPlace   String?
+  causeOfDeath String?
 
-  deathDate  DateTime?
-  deathPlace String?
-  isAlive    Boolean   @default(true)
+  marriageDate  DateTime?
+  marriagePlace String?
+
+  spouseMaidenName String?
+  spouseFather     String?
+  spouseMother     String?
+
+  profession String?
+  email      String?
+  phone      String?
 
   userId   String  @db.Uuid
   parentId String? @db.Uuid
