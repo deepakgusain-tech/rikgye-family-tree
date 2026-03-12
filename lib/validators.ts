@@ -1,5 +1,5 @@
 import z from "zod";
-import { Role, Status } from "./generated/prisma/enums";
+import { Gender, Role, Status } from "./generated/prisma/enums";
 
 // user schema
 export const userSchema = z.object({
@@ -33,7 +33,7 @@ export const cmsSchema = z.object({
     z.string().min(1)
   ]),
   pageContent: z.string().min(1, "Page Content is required"),
-  status: z.enum(Object.values(Status)),
+  status: z.enum(Object.values(Status)).default(Status.INACTIVE),
   createdAt: z.date().nullable().optional(),
   updatedAt: z.date().nullable().optional(),
 });
@@ -50,5 +50,29 @@ export const passwordSchema = z
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords do not match",
-    path: ["confirmPassword"], 
+    path: ["confirmPassword"],
   });
+
+
+export const familyMemberSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  image: z.string().min(1, "Image is required"),
+  gender: z.enum(Object.values(Gender)),
+  birthDate: z.string().optional(),
+  birthPlace: z.string().optional(),
+  isAlive: z.boolean(),
+  currentResidence: z.string().optional(),
+  deathDate: z.string().optional(),
+  deathPlace: z.string().optional(),
+  causeOfDeath: z.string().optional(),
+  marriageDate: z.string().optional(),
+  marriagePlace: z.string().optional(),
+  spouseMaidenName: z.string().optional(),
+  spouseFather: z.string().optional(),
+  spouseMother: z.string().optional(),
+  profession: z.string().optional(),
+  email: z.string().min(1, "Invalid email").optional(),
+  phone: z.string().optional(),
+  parentId: z.string().nullable().optional(),
+  userId: z.string().nullable().optional(),
+});
