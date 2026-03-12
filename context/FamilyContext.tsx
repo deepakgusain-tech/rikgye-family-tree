@@ -17,10 +17,17 @@ interface FamilyContextType {
   addFamily: (name: string) => void;
   editFamilyName: (id: string, name: string) => void;
   deleteFamily: (id: string) => void;
-  addMember: (familyId: string, member: Omit<FamilyMember, "id">) => void;
+
+  addMember: (familyId: string, member: FamilyMember) => void;
+
   editMember: (familyId: string, member: FamilyMember) => void;
-  deleteMember: (familyId: string, memberId: string, deleteChildren: boolean) => void;
+  deleteMember: (
+    familyId: string,
+    memberId: string,
+    deleteChildren: boolean
+  ) => void;
 }
+
 
 const FamilyContext = createContext<FamilyContextType | null>(null);
 
@@ -41,13 +48,29 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const members = await getFamilyMembers();
-      if (!members || members.length === 0) return;
+      const tree = await getFamilyMembers();
+
+      const flatten = (nodes: any[]): any[] =>
+        nodes.flatMap((node) => [
+          { ...node, children: undefined },
+          ...(node.children ? flatten(node.children) : []),
+        ]);
+
+      const members = tree?.length ? flatten(tree) : [];
 
       const familyId = genFamilyId();
-      setFamilies([{ id: familyId, name: "My Family", members }]);
+
+      setFamilies([
+        {
+          id: familyId,
+          name: "My Family",
+          members,
+        },
+      ]);
+
       setActiveFamilyId(familyId);
     };
+
     fetchMembers();
   }, []);
 
@@ -77,23 +100,42 @@ export const FamilyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateMembers = useCallback(
     (familyId: string, updater: (members: FamilyMember[]) => FamilyMember[]) => {
       setFamilies((prev) =>
-        prev.map((f) => (f.id === familyId ? { ...f, members: updater(f.members) } : f))
+        prev.map((family) => {
+          if (family.id !== familyId) return family;
+
+          const safeMembers = (family.members ?? []).filter(Boolean);
+
+          return {
+            ...family,
+            members: updater(safeMembers),
+          };
+        })
       );
     },
     []
   );
 
-  const addMember = useCallback(
-    (familyId: string, member: Omit<FamilyMember, "id">) => {
-      updateMembers(familyId, (members) => [...members, { ...member, id: genMemberId() }]);
-    },
-    [updateMembers]
-  );
+  const addMember = (familyId: string, member: FamilyMember) => {
+    setFamilies((prev) =>
+      prev.map((family) =>
+        family.id === familyId
+          ? {
+            ...family,
+            members: [...family.members, member],
+          }
+          : family
+      )
+    );
+  };
 
   const editMember = useCallback(
-    (familyId: string, member: FamilyMember) => {
+    (familyId: string, member: FamilyMember | undefined) => {
+      if (!member || !member.id) return;
+
       updateMembers(familyId, (members) =>
-        members.map((m) => (m.id === member.id ? member : m))
+        members
+          .filter((m) => m && m.id)
+          .map((m) => (m!.id === member.id ? member : m))
       );
     },
     [updateMembers]
