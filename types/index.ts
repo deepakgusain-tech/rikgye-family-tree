@@ -3,7 +3,7 @@ import z from "zod";
 
 export type User = z.infer<typeof userSchema>
 export type CMS = z.infer<typeof cmsSchema>
-export type FamilyMember = z.infer<typeof familyMemberSchema>;
+export type FamilyMember = z.infer<typeof familyMemberSchema> & { id: string };
 
 export interface Family {
 id: string;

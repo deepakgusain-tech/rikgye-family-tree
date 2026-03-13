@@ -1,12 +1,5 @@
 "use client"
 
-<<<<<<< HEAD
-import { useEffect, useRef, useState, useMemo } from "react"
-import "leaflet/dist/leaflet.css";
-
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
-
-=======
 import { useState, useMemo, useEffect } from "react"
 import "leaflet/dist/leaflet.css"
 import dynamic from "next/dynamic"
@@ -57,7 +50,6 @@ function FitBounds({ members, mode }: any) {
 
   return null
 }
->>>>>>> 740aef27f9702e0c47884b80daa5eb9ea0d520b9
 
 const members = [
   {

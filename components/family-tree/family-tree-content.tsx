@@ -7,6 +7,7 @@ import Tree, { RawNodeDatum, CustomNodeElementProps } from "react-d3-tree";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import MemberFormModal from "./member-form-modal";
 import { DeleteMemberDialog } from "./delete-member-modal";
+import { deleteFamilyMember } from "@/lib/actions/family-member";
 
 /* ───────────────── TREE BUILDER ───────────────── */
 
@@ -14,6 +15,7 @@ function buildTree(members: FamilyMember[]): RawNodeDatum[] {
   const map = new Map<string, RawNodeDatum & { __id: string }>();
 
   members.forEach((m) => {
+    if (!m || !m.id) return;
     map.set(m.id, {
       name: m.name,
       attributes: {
@@ -46,10 +48,16 @@ function buildTree(members: FamilyMember[]): RawNodeDatum[] {
   const roots: RawNodeDatum[] = [];
 
   members.forEach((m) => {
+    if (!m || !m.id) return;
+
     const node = map.get(m.id)!;
+    if (!node) return;
 
     if (m.parentId && map.has(m.parentId)) {
-      (map.get(m.parentId)!.children as RawNodeDatum[]).push(node);
+      const parent = map.get(m.parentId);
+      if (parent) {
+        (parent.children as RawNodeDatum[]).push(node);
+      }
     } else {
       roots.push(node);
     }
@@ -81,7 +89,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
   const attrs = nodeDatum.attributes as Record<string, string> | undefined;
 
   const memberId = attrs?.id ?? "";
-  const member = members.find((m) => m.id === memberId);
+  const member = members.find((m) => m && m.id === memberId);
   if (!member) return null;
 
   const gender = attrs?.gender ?? "";
@@ -94,8 +102,8 @@ const NodeCard: React.FC<NodeCardProps> = ({
     gender === "MALE"
       ? "hsl(210 60% 70%)"
       : gender === "FEMALE"
-      ? "hsl(340 60% 70%)"
-      : "hsl(var(--primary))";
+        ? "hsl(340 60% 70%)"
+        : "hsl(var(--primary))";
 
   return (
     <g>
@@ -193,9 +201,8 @@ const NodeCard: React.FC<NodeCardProps> = ({
             )}
 
             <p
-              className={`text-[10px] ${
-                isAlive === "Yes" ? "text-green-600" : "text-red-500"
-              }`}
+              className={`text-[10px] ${isAlive === "Yes" ? "text-green-600" : "text-red-500"
+                }`}
             >
               {isAlive === "Yes" ? "Alive" : "Deceased"}
             </p>
@@ -210,7 +217,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
 
 interface TreeLayoutProps {
   members: FamilyMember[];
-  onAdd: (member: FamilyMember) => void;
+  onAdd: (member?: FamilyMember) => void;
   onEdit: (member: FamilyMember) => void;
   onDelete: (member: FamilyMember) => void;
 }
@@ -241,11 +248,19 @@ const TreeLayout: React.FC<TreeLayoutProps> = ({
 
   if (members.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
         <p className="font-display text-lg">No members yet</p>
-        <p className="text-sm mt-1">
+
+        <p className="text-sm">
           Add your first family member to get started
         </p>
+
+        <button
+          onClick={() => onAdd()}
+          className="px-4 py-2 rounded-md bg-primary text-white hover:opacity-90"
+        >
+          Add First Member
+        </button>
       </div>
     );
   }
@@ -261,6 +276,8 @@ const TreeLayout: React.FC<TreeLayoutProps> = ({
       setTranslate({ x: width / 2, y: 120 });
     }
   }, []);
+
+
 
   return (
     <div
@@ -301,9 +318,9 @@ export const FamilyTreeContent: React.FC = () => {
 
   const members = activeFamily?.members ?? [];
 
-  const handleAdd = (parent: FamilyMember) => {
+  const handleAdd = (parent?: FamilyMember) => {
     setEditingMember(null);
-    setDefaultParentId(parent.id);
+    setDefaultParentId(parent?.id ?? null);
     setShowMemberForm(true);
   };
 
@@ -318,20 +335,23 @@ export const FamilyTreeContent: React.FC = () => {
     setShowDeleteDialog(true);
   };
 
-  const handleMemberSubmit = (data: Omit<FamilyMember, "id">) => {
+  const handleMemberSubmit = (member: any) => {
     if (!activeFamily) return;
 
     if (editingMember) {
-      editMember(activeFamily.id, { ...data, id: editingMember.id });
+      editMember(activeFamily.id, member);
     } else {
-      addMember(activeFamily.id, data);
+      addMember(activeFamily.id, member);
     }
   };
 
-  const handleDeleteConfirm = (deleteChildren: boolean) => {
+  const handleDeleteConfirm = async (deleteChildren: boolean) => {
     if (!activeFamily || !deletingMember) return;
 
+    await deleteFamilyMember(deletingMember.id, deleteChildren);
+
     deleteMember(activeFamily.id, deletingMember.id, deleteChildren);
+
     setShowDeleteDialog(false);
     setDeletingMember(null);
   };
@@ -348,10 +368,31 @@ export const FamilyTreeContent: React.FC = () => {
 
   if (!activeFamily) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 py-20 text-muted-foreground">
-        <p className="font-display text-lg">No family selected</p>
-        <p className="text-sm mt-1">Create a new family to get started</p>
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <p className="font-display text-lg">No family created</p>
+
+          <p className="text-sm text-muted-foreground">
+            Create your first family to start building the tree
+          </p>
+
+          <button
+            onClick={() => handleAdd()}
+            className="px-4 py-2 rounded-md bg-primary text-white hover:opacity-90"
+          >
+            Add new Family
+          </button>
+        </div>
+
+        <MemberFormModal
+          open={showMemberForm}
+          onClose={() => setShowMemberForm(false)}
+          onSubmit={handleMemberSubmit}
+          existingMembers={[]}
+          editingMember={editingMember}
+          defaultParentId={null}
+        />
+      </>
     );
   }
 

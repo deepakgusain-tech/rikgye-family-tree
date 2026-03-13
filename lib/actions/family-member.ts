@@ -69,7 +69,7 @@ export async function createFamilyMember(data: Omit<FamilyMember, "id">) {
       },
     },
   });
-
+  return member;
 }
 
 export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
@@ -119,23 +119,55 @@ export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
   return roots;
 }
 
-// export function findMemberNameById(
-//   id: string | null,
-//   members: FamilyMemberTree[]
-// ): string | undefined {
-//   if (!id) return undefined;
+export async function updateFamilyMember(data: FamilyMember) {
+  const updated = await prisma.familyMember.update({
+    where: {
+      id: data.id,
+    },
+    data: {
+      name: data.name,
+      image: data.image,
+      gender: data.gender,
+      birthDate: data.birthDate,
+      birthPlace: data.birthPlace,
+      isAlive: data.isAlive,
+      currentResidence: data.currentResidence,
+      deathDate: data.deathDate,
+      deathPlace: data.deathPlace,
+      profession: data.profession,
+      email: data.email,
+      phone: data.phone,
+      parentId: data.parentId,
+      marriageDate: data.marriageDate,
+      marriagePlace: data.marriagePlace,
+      spouseFather: data.spouseFather,
+      spouseMother: data.spouseMother,
+      spouseMaidenName: data.spouseMaidenName,
+      causeOfDeath: data.causeOfDeath,
+    },
+  });
 
-//   const flatList: FamilyMemberTree[] = [];
+  return updated;
+}
 
-//   function flatten(nodes: FamilyMemberTree[]) {
-//     nodes.forEach((node) => {
-//       flatList.push(node);
-//       if (node.children.length > 0) flatten(node.children);
-//     });
-//   }
+export async function deleteFamilyMember(id: string, deleteChildren: boolean) {
+  if (deleteChildren) {
+    await prisma.familyMember.deleteMany({
+      where: {
+        OR: [
+          { id },
+          { parentId: id }
+        ]
+      }
+    });
+  } else {
+    await prisma.familyMember.updateMany({
+      where: { parentId: id },
+      data: { parentId: null }
+    });
 
-//   flatten(members);
-
-//   const parent = flatList.find((m) => m.id === id);
-//   return parent?.name;
-// }
+    await prisma.familyMember.delete({
+      where: { id }
+    });
+  }
+}
