@@ -27,7 +27,7 @@ export default async function RootLayout({
         <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center border-b gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+                <header className="flex h-16 shrink-0 items-center border-b  transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
                     <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6 my-2">
                         <SidebarTrigger className="-ml-1" />
                         <Separator
@@ -39,7 +39,7 @@ export default async function RootLayout({
                         </div>
                     </div>
                 </header>
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                <div className="flex flex-1 flex-col gap-4 pt-0">
                     {children}
                 </div>
             </SidebarInset>

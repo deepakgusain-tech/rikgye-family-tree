@@ -3,8 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { deleteUser, getUsers } from '@/lib/actions/user-action';
-import { CMS, User } from '@/types'
+import { CMS } from '@/types'
 import { EditIcon, Trash } from 'lucide-react';
 import Link from 'next/link'
 import { useState } from 'react'
@@ -34,64 +33,114 @@ const CMSTable = ({ data }: { data: CMS[] }) => {
   }
 
   return (
-    <Table className='w-full'>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Page Icon</TableHead>
-          <TableHead>Page Title</TableHead>
-          <TableHead>Page Content</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>CreatedAt</TableHead>
-          <TableHead>Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {pages.map((page) => (
-          <TableRow key={page.id}>
+    <div className="w-full">
 
-            {/* Image column — intentionally blank */}
-            <TableCell>
-              {page.pageIcon && <img src={page.pageIcon} alt="" height="100" width="100" />}
-            </TableCell>
+      <Table className="w-full">
 
-            <TableCell>{page.pageTitle}</TableCell>
-            <TableCell>{page.pageContent}</TableCell>
+        <TableHeader className="bg-emerald-50 dark:bg-emerald-900/30 border-b border-emerald-200 dark:border-emerald-800">
+          <TableRow className="hover:bg-transparent">
 
-            <TableCell>
-              {page.status === "ACTIVE" ? (
-                <Badge className="bg-green-500">ACTIVE</Badge>
-              ) : (
-                <Badge variant="destructive">INACTIVE</Badge>
-              )}
-            </TableCell>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Page Icon
+            </TableHead>
 
-            <TableCell>
-              <ClientDate date={page.createdAt} />
-            </TableCell>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Page Title
+            </TableHead>
 
-            <TableCell>
-              <div className="flex gap-2">
-                <Button asChild size="icon" className="bg-orange-500 hover:bg-orange-600">
-                  <Link href={`/admin/cms/edit/${page.id}`}>
-                    <EditIcon size={16} />
-                  </Link>
-                </Button>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Page Content
+            </TableHead>
 
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => deletePageHandler(page.id)}
-                >
-                  <Trash size={16} />
-                </Button>
-              </div>
-            </TableCell>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Status
+            </TableHead>
+
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              CreatedAt
+            </TableHead>
+
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200 text-right">
+              Action
+            </TableHead>
 
           </TableRow>
-        ))}
-      </TableBody>
+        </TableHeader>
 
-    </Table>
+        <TableBody>
+
+          {pages.map((page) => (
+            <TableRow
+              key={page.id}
+              className="hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors"
+            >
+
+              <TableCell>
+                {page.pageIcon && (
+                  <img
+                    src={page.pageIcon}
+                    alt=""
+                    className="h-8 w-8 rounded-md border border-emerald-200 object-cover"
+                  />
+                )}
+              </TableCell>
+
+              <TableCell className="font-medium text-foreground">
+                {page.pageTitle}
+              </TableCell>
+
+              <TableCell className="text-muted-foreground max-w-[400px] truncate">
+                {page.pageContent}
+              </TableCell>
+
+              <TableCell>
+                {page.status === "ACTIVE" ? (
+                  <Badge className="bg-emerald-500 hover:bg-emerald-600">
+                    ACTIVE
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive">
+                    INACTIVE
+                  </Badge>
+                )}
+              </TableCell>
+
+              <TableCell>
+                <ClientDate date={page.createdAt} />
+              </TableCell>
+
+              <TableCell>
+                <div className="flex justify-end gap-2">
+
+                  <Button
+                    asChild
+                    size="icon"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Link href={`/admin/cms/edit/${page.id}`}>
+                      <EditIcon size={16} />
+                    </Link>
+                  </Button>
+
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    onClick={() => deletePageHandler(page.id)}
+                  >
+                    <Trash size={16} />
+                  </Button>
+
+                </div>
+              </TableCell>
+
+            </TableRow>
+          ))}
+
+        </TableBody>
+
+      </Table>
+
+    </div>
   )
 }
 

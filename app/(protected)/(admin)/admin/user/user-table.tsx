@@ -33,72 +33,106 @@ const UserTable = ({ data }: { data: User[] }) => {
   }
 
   return (
-    <Table className='w-full'>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Image</TableHead>
-          <TableHead>First Name</TableHead>
-          <TableHead>Last Name</TableHead>
-          <TableHead>Email</TableHead>
+    <div className="w-full overflow-x-auto">
 
+      <Table className='w-full'>
 
-
-
-            
-          <TableHead>Status</TableHead>
-          <TableHead>CreatedAt</TableHead>
-          <TableHead>Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.map((user) => (
-          <TableRow key={user.id}>
-
-            {/* Image column — intentionally blank */}
-            <TableCell>
-              {user.avatar && <img src={user.avatar} alt="" height="100" width="100" />}
-            </TableCell>
-
-            <TableCell>{user.firstName}</TableCell>
-            <TableCell>{user.lastName}</TableCell>
-
-            <TableCell>{user.email}</TableCell>
-
-            <TableCell>
-              {user.status === "ACTIVE" ? (
-                <Badge className="bg-green-500">ACTIVE</Badge>
-              ) : (
-                <Badge variant="destructive">INACTIVE</Badge>
-              )}
-            </TableCell>
-
-            <TableCell>
-              <ClientDate date={user.createdAt} />
-            </TableCell>
-
-            <TableCell>
-              <div className="flex gap-2">
-                <Button asChild size="icon" className="bg-orange-500 hover:bg-orange-600">
-                  <Link href={`/admin/user/edit/${user.id}`}>
-                    <EditIcon size={16} />
-                  </Link>
-                </Button>
-
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => deleteUserHandler(user.id)}
-                >
-                  <Trash size={16} />
-                </Button>
-              </div>
-            </TableCell>
-
+        <TableHeader className="bg-emerald-50 dark:bg-emerald-900/30">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Image
+            </TableHead>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              First Name
+            </TableHead>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Last Name
+            </TableHead>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Email
+            </TableHead>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Status
+            </TableHead>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              CreatedAt
+            </TableHead>
+            <TableHead className="font-semibold text-emerald-900 dark:text-emerald-200">
+              Action
+            </TableHead>
           </TableRow>
-        ))}
-      </TableBody>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow
+              key={user.id}
+              className="hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors"
+            >
 
-    </Table>
+              <TableCell>
+                {/* {user.avatar && <img src={user.avatar} alt="" height="100" width="100" />} */}
+              </TableCell>
+
+              <TableCell className="font-medium">
+                {user.firstName}
+              </TableCell>
+
+              <TableCell>
+                {user.lastName}
+              </TableCell>
+
+              <TableCell className="text-muted-foreground">
+                {user.email}
+              </TableCell>
+
+              <TableCell>
+                {user.status === "ACTIVE" ? (
+                  <Badge className="bg-emerald-500 hover:bg-emerald-600">
+                    ACTIVE
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive">
+                    INACTIVE
+                  </Badge>
+                )}
+              </TableCell>
+
+              <TableCell>
+                <ClientDate date={user.createdAt} />
+              </TableCell>
+
+              <TableCell>
+                <div className="flex gap-2">
+
+                  <Button
+                    asChild
+                    size="icon"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Link href={`/admin/user/edit/${user.id}`}>
+                      <EditIcon size={16} />
+                    </Link>
+                  </Button>
+
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    onClick={() => deleteUserHandler(user.id)}
+                  >
+                    <Trash size={16} />
+                  </Button>
+
+                </div>
+              </TableCell>
+
+            </TableRow>
+          ))}
+
+        </TableBody>
+
+      </Table>
+
+    </div>
   )
 }
 

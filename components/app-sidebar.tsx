@@ -2,47 +2,30 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
   HomeIcon,
-  LogOut,
-  Map,
-  PieChart,
-  Settings2,
   Settings2Icon,
-  SquareTerminal,
-  TreesIcon,
 } from "lucide-react"
 
+import {
+  IconAddressBook,
+  IconDashboard,
+  IconPageBreak,
+  IconSitemap,
+  IconUser,
+} from "@tabler/icons-react"
+
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { Logo } from "./ui/logo-collapse"
+
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { IconAddressBook, IconDashboard, IconPageBreak, IconSitemap, IconUser } from "@tabler/icons-react"
-import { Collapsible, CollapsibleTrigger } from "./ui/collapsible"
-import { Logo } from "./ui/logo-collapse"
 
-// This is sample data.
+ 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Home",
@@ -56,7 +39,7 @@ const data = {
       icon: IconDashboard,
       isActive: true,
     },
-     {
+    {
       title: "Users",
       url: "/admin/user",
       icon: IconUser,
@@ -90,18 +73,34 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-green-200 bg-gradient-to-b from-emerald-50 via-green-50 to-lime-50
+      dark:from-green-950 dark:via-emerald-950 dark:to-green-900
+      backdrop-blur-xl"
+      {...props}
+    >
+       
+      <SidebarHeader className="border-b border-green-200 px-4">
         <Logo />
       </SidebarHeader>
-      <SidebarContent>
+ 
+      <SidebarContent
+        className="
+        px-2 py-4
+        [&_[data-sidebar=menu-button]]:rounded-xl
+        [&_[data-sidebar=menu-button]]:transition-all
+        [&_[data-sidebar=menu-button]]:duration-200
+        [&_[data-sidebar=menu-button]]:text-green-800
+        [&_[data-sidebar=menu-button]]:hover:bg-green-100
+        [&_[data-sidebar=menu-button]]:hover:text-green-900
+        dark:[&_[data-sidebar=menu-button]]:text-green-200
+        dark:[&_[data-sidebar=menu-button]]:hover:bg-green-900
+      "
+      >
         <NavMain items={data.navMain} />
       </SidebarContent>
-      <SidebarRail />
     </Sidebar>
   )
 }
-
-

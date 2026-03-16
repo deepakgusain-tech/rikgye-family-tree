@@ -1,9 +1,17 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { Loader2, UserPlus } from "lucide-react"
 
 export default function AddMember() {
+
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   const handleSubmit = async (e: any) => {
     e.preventDefault()
@@ -19,6 +27,7 @@ export default function AddMember() {
     if (res.ok) {
       alert("Member Added Successfully!")
       e.target.reset()
+      router.push("/prominent")
     } else {
       alert("Error adding member")
     }
@@ -27,53 +36,115 @@ export default function AddMember() {
   }
 
   return (
-    <div className="max-w-xl mx-auto mt-20">
-      <h2 className="text-3xl font-serif mb-6">
-        Add Family Member
-      </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="max-w-xl mx-auto mt-16 px-6">
 
-        <input
-          type="text"
-          name="name"
-          placeholder="Full Name"
-          required
-          className="w-full border p-3"
-        />
+      <Card className="border border-emerald-100 shadow-sm">
 
-        <input
-          type="text"
-          name="role"
-          placeholder="Role / Title"
-          required
-          className="w-full border p-3"
-        />
+        <CardHeader>
 
-        <textarea
-          name="bio"
-          placeholder="Biography"
-          required
-          rows={4}
-          className="w-full border p-3"
-        />
+          <CardTitle className="text-2xl font-semibold text-emerald-900 flex items-center gap-2">
+            <UserPlus size={20} />
+            Add Family Member
+          </CardTitle>
 
-        <input
-          type="file"
-          name="image"
-          accept="image/png, image/jpeg"
-          required
-          className="w-full"
-        />
+        </CardHeader>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-black text-white px-6 py-3"
-        >
-          {loading ? "Uploading..." : "Add Member"}
-        </button>
-      </form>
+
+        <CardContent>
+
+          <form onSubmit={handleSubmit} className="space-y-5"> 
+            <div className="space-y-2">
+
+              <label className="text-sm font-medium text-emerald-900">
+                Full Name
+              </label>
+
+              <Input
+                type="text"
+                name="name"
+                placeholder="Enter full name"
+                required
+                className="focus-visible:ring-emerald-500"
+              />
+
+            </div> 
+
+            <div className="space-y-2">
+
+              <label className="text-sm font-medium text-emerald-900">
+                Role / Title
+              </label>
+
+              <Input
+                type="text"
+                name="role"
+                placeholder="Enter role or title"
+                required
+                className="focus-visible:ring-emerald-500"
+              />
+
+            </div> 
+
+            <div className="space-y-2">
+
+              <label className="text-sm font-medium text-emerald-900">
+                Biography
+              </label>
+
+              <Textarea
+                name="bio"
+                placeholder="Write a short biography..."
+                rows={4}
+                required
+                className="focus-visible:ring-emerald-500"
+              />
+
+            </div>
+ 
+            <div className="space-y-2">
+
+              <label className="text-sm font-medium text-emerald-900">
+                Profile Image
+              </label>
+
+              <Input
+                type="file"
+                name="image"
+                accept="image/png, image/jpeg"
+                required
+                className="cursor-pointer"
+              />
+
+            </div> 
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center gap-2"
+            >
+
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  Add Member
+                </>
+              )}
+
+            </Button>
+
+          </form>
+
+        </CardContent>
+
+      </Card>
+
     </div>
+
   )
 }
