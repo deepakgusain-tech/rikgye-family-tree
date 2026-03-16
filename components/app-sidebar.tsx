@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation"
+
 import {
   HomeIcon,
   Settings2Icon,
@@ -24,55 +26,53 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
- 
-const data = {
-  navMain: [
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+
+  const pathname = usePathname()
+
+  const navMain = [
     {
       title: "Home",
       url: "/admin/home",
       icon: HomeIcon,
-      isActive: true,
     },
     {
       title: "Dashboard",
       url: "/admin/dashboard",
       icon: IconDashboard,
-      isActive: true,
     },
     {
       title: "Users",
       url: "/admin/user",
       icon: IconUser,
-      isActive: true,
     },
     {
       title: "Families",
       url: "/admin/familes",
       icon: IconSitemap,
-      isActive: true,
     },
     {
       title: "Find Rikhye",
       url: "/admin/findmember",
       icon: IconAddressBook,
-      isActive: true,
     },
     {
       title: "Pages",
       url: "/admin/cms",
       icon: IconPageBreak,
-      isActive: true,
     },
     {
       title: "General Settings",
       url: "/admin/settings",
       icon: Settings2Icon,
-      isActive: true,
     },
-  ],
-}
+  ]
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const items = navMain.map((item) => ({
+    ...item,
+    isActive: pathname.startsWith(item.url),
+  }))
+
   return (
     <Sidebar
       collapsible="icon"
@@ -81,11 +81,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       backdrop-blur-xl"
       {...props}
     >
-       
+
       <SidebarHeader className="border-b border-green-200 px-4">
         <Logo />
       </SidebarHeader>
- 
+
       <SidebarContent
         className="
         px-2 py-4
@@ -95,12 +95,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         [&_[data-sidebar=menu-button]]:text-green-800
         [&_[data-sidebar=menu-button]]:hover:bg-green-100
         [&_[data-sidebar=menu-button]]:hover:text-green-900
+        [&_[data-sidebar=menu-button][data-active=true]]:bg-emerald-600
+        [&_[data-sidebar=menu-button][data-active=true]]:text-white
+        [&_[data-sidebar=menu-button][data-active=true]]:shadow-md
         dark:[&_[data-sidebar=menu-button]]:text-green-200
         dark:[&_[data-sidebar=menu-button]]:hover:bg-green-900
       "
       >
-        <NavMain items={data.navMain} />
+        <NavMain items={items} />
       </SidebarContent>
+
+      <SidebarRail />
     </Sidebar>
   )
 }

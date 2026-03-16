@@ -5,22 +5,22 @@ import { User2Icon, Users2 } from "lucide-react";
 
 export default function Page() {
   return (
-    <div className=" space-y-6 bg-gradient-to-b from-green-50 to-emerald-100 p-4 rounded-xl min-h-screen">
-     <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white">
-  <CardContent className="flex flex-col gap-1 py-7 px-6">
+    <div className="space-y-6 p-4 rounded-xl min-h-screen">
+      <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white">
+        <CardContent className="flex flex-col gap-1 py-7 px-6">
 
-    <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-      Hello, Admin
-    </h1>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            Hello, Admin
+          </h1>
 
-    <p className="text-sm md:text-base opacity-90">
-      Welcome back! again to your dashboard your dashboard today.
-    </p>
+          <p className="text-sm md:text-base opacity-90">
+            Welcome back! again to your dashboard your dashboard today.
+          </p>
 
-  </CardContent>
- 
-  <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
-</Card>
+        </CardContent>
+
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
+      </Card>
 
       <section className="grid lg:grid-cols-4 md:grid-cols-2 grid-cols-1 gap-4">
         <Card className="shadow-md hover:shadow-lg transition bg-white/80 backdrop-blur">

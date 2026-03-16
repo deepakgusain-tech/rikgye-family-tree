@@ -39,7 +39,7 @@ export default async function RootLayout({
                         </div>
                     </div>
                 </header>
-                <div className="flex flex-1 flex-col">
+                <div className="flex flex-1 flex-col bg-gradient-to-b from-green-50 to-emerald-100 ">
                     {children}
                 </div>
             </SidebarInset>

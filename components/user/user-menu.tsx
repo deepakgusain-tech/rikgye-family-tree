@@ -26,20 +26,21 @@ const UserMenu = ({ user }: { user: any }) => {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Image
-          src={image}
-          height={36}
-          width={36}
-          alt={user.name}
-          className="rounded-full border-2 border-emerald-500 object-cover cursor-pointer hover:scale-105 transition"
-        />
+        <div className="w-9 h-9 rounded-full border-2 border-emerald-500 overflow-hidden cursor-pointer hover:scale-105 transition shrink-0">
+          <Image
+            src={image}
+            alt={user.name}
+            width={36}
+            height={36}
+            className="w-full h-full object-cover"
+          />
+        </div>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
         align="end"
         className="w-56 border border-emerald-200 shadow-lg bg-white"
       >
-
         <div className="px-3 py-2 border-b border-emerald-100">
           <p className="text-sm font-semibold text-gray-800 truncate">
             {user.name}
@@ -55,10 +56,7 @@ const UserMenu = ({ user }: { user: any }) => {
               asChild
               className="cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50"
             >
-              <Link
-                href="/admin/profile"
-                className="flex items-center gap-2"
-              >
+              <Link href="/admin/profile" className="flex items-center gap-2">
                 <CircleUser size={16} />
                 Profile
               </Link>
@@ -68,10 +66,7 @@ const UserMenu = ({ user }: { user: any }) => {
               asChild
               className="cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50"
             >
-              <Link
-                href="/admin/settings"
-                className="flex items-center gap-2"
-              >
+              <Link href="/admin/settings" className="flex items-center gap-2">
                 <SlidersHorizontal size={16} />
                 Settings
               </Link>
@@ -88,7 +83,6 @@ const UserMenu = ({ user }: { user: any }) => {
           <LogOut size={16} />
           Logout
         </DropdownMenuItem>
-
       </DropdownMenuContent>
     </DropdownMenu>
   );

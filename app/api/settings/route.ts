@@ -22,6 +22,9 @@ export async function GET() {
   try {
     const settings = await prisma.settings.findFirst();
 
+    console.log(settings);
+
+
     return NextResponse.json(settings);
   } catch (error) {
     console.error("GET SETTINGS ERROR:", error);
@@ -39,29 +42,21 @@ export async function POST(req: Request) {
 
     let updated = false;
 
-    if (body.id !== "") {
-      await prisma.settings.update({
-        where: { id: body.id },
-        data: {
-          isSMTP: false,
-          ...body,
-        },
-      });
-
-      updated = true;
-    } else {
-      await prisma.settings.create({
-        data: {
-          isSMTP: false,
-          ...body,
-        },
-      });
-    }
-  
+    await prisma.settings.upsert({
+      where: { id: body.id },
+      update: {
+        isSMTP: false,
+        ...body,
+      },
+      create: {
+        isSMTP: false,
+        ...body,
+      },
+    });
 
     return NextResponse.json(
       updated ? { message: "Settings updated successfully" } : { message: "Settings created successfully" }
-    , {status: 200});
+      , { status: 200 });
   } catch (error) {
     console.error("CREATE SETTINGS ERROR:", error);
     return NextResponse.json(

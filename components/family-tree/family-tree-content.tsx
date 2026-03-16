@@ -59,7 +59,7 @@ interface NodeCardProps {
   onView: (member: FamilyMember) => void;
 }
 
-const CARD_W = 130;
+const CARD_W = 140;
 const CARD_H = 110;
 
 const NodeCard: React.FC<NodeCardProps> = ({
@@ -89,27 +89,28 @@ const NodeCard: React.FC<NodeCardProps> = ({
   const birthPlace = attrs?.birthPlace ?? "";
   const isAlive = attrs?.isAlive ?? "Yes";
 
-  const accentBorder =
+  const accent =
     gender === "MALE"
-      ? "hsl(210 60% 70%)"
+      ? "#3b82f6"
       : gender === "FEMALE"
-      ? "hsl(340 60% 70%)"
-      : "hsl(var(--primary))";
+      ? "#ec4899"
+      : "#10b981";
 
   return (
     <g>
       <foreignObject
-        x={-CARD_W / 2}
-        y={-CARD_H / 2 - 40}
-        width={CARD_W}
-        height={CARD_H + 100}
+        x={-CARD_W / 2 - 60}
+        y={-CARD_H / 2 - 20}
+        width={CARD_W + 80}
+        height={CARD_H + 60}
         style={{ overflow: "visible" }}
       >
         <div
-          className="relative flex flex-col items-center group"
-          style={{ width: CARD_W, pointerEvents: "all" }}
+          className="group flex items-center gap-2"
+          style={{ pointerEvents: "all" }}
         >
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 flex gap-1 z-50 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all">
+          {/* ACTION BUTTONS LEFT */}
+          <div className="flex flex-col gap-2 opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto transition-all duration-200">
 
             {canAdd && (
               <button
@@ -117,7 +118,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
                   e.stopPropagation();
                   onAdd(member);
                 }}
-                className="w-7 h-7 rounded-full bg-white shadow flex items-center justify-center hover:scale-110"
+                className="w-7 h-7 rounded-full bg-emerald-500 text-white shadow hover:scale-110 flex items-center justify-center"
               >
                 <Plus size={14} />
               </button>
@@ -129,7 +130,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
                   e.stopPropagation();
                   onEdit(member);
                 }}
-                className="w-7 h-7 rounded-full bg-white shadow flex items-center justify-center hover:scale-110"
+                className="w-7 h-7 rounded-full bg-blue-500 text-white shadow hover:scale-110 flex items-center justify-center"
               >
                 <Pencil size={14} />
               </button>
@@ -141,28 +142,28 @@ const NodeCard: React.FC<NodeCardProps> = ({
                   e.stopPropagation();
                   onDelete(member);
                 }}
-                className="w-7 h-7 rounded-full bg-white shadow flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white hover:scale-110"
+                className="w-7 h-7 rounded-full bg-red-500 text-white shadow hover:scale-110 flex items-center justify-center"
               >
                 <Trash2 size={14} />
               </button>
             )}
           </div>
 
+          {/* CARD */}
           <div
             onClick={() => onView(member)}
-            className="mt-10 rounded-xl border bg-white shadow-sm p-3 flex flex-col items-center gap-1.5 cursor-pointer"
+            className="rounded-xl bg-white border shadow-md hover:shadow-lg transition-all p-3 flex flex-col items-center gap-1.5 cursor-pointer"
             style={{
               width: CARD_W,
-              borderTopColor: accentBorder,
-              borderTopWidth: 3,
-              pointerEvents: "all",
+              borderTop: `4px solid ${accent}`,
             }}
           >
             {image ? (
               <img
                 src={image}
                 alt={nodeDatum.name}
-                className="w-12 h-12 rounded-full object-cover border-2 border-blue-400"
+                className="w-12 h-12 rounded-full object-cover border-2"
+                style={{ borderColor: accent }}
               />
             ) : (
               <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
@@ -183,8 +184,8 @@ const NodeCard: React.FC<NodeCardProps> = ({
             )}
 
             <p
-              className={`text-[10px] ${
-                isAlive === "Yes" ? "text-green-600" : "text-red-500"
+              className={`text-[10px] font-medium ${
+                isAlive === "Yes" ? "text-emerald-600" : "text-red-500"
               }`}
             >
               {isAlive === "Yes" ? "Alive" : "Deceased"}
@@ -252,7 +253,7 @@ const TreeLayout: React.FC<TreeLayoutProps> = ({
   return (
     <div
       ref={containerRef}
-      className="w-full flex-1 rounded-lg border bg-background"
+      className="w-full flex-1"
       style={{ height: "calc(100vh - 160px)", minHeight: 400 }}
     >
       <Tree
@@ -260,7 +261,7 @@ const TreeLayout: React.FC<TreeLayoutProps> = ({
         orientation="vertical"
         translate={translate}
         pathFunc="step"
-        nodeSize={{ x: 200, y: 180 }}
+        nodeSize={{ x: 220, y: 180 }}
         renderCustomNodeElement={renderNode}
         collapsible
         zoomable
@@ -291,8 +292,6 @@ export const FamilyTreeContent: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCannotDeleteDialog, setShowCannotDeleteDialog] = useState(false);
 
-  /* ---------------- INIT USER ---------------- */
-
   useEffect(() => {
     const init = async () => {
       const user = await getCurrentUser();
@@ -303,8 +302,6 @@ export const FamilyTreeContent: React.FC = () => {
 
     init();
   }, []);
-
-  /* ---------------- HANDLERS ---------------- */
 
   const handleAdd = (parent?: FamilyMember) => {
     setEditingMember(null);
@@ -346,18 +343,14 @@ export const FamilyTreeContent: React.FC = () => {
     setDeletingMember(null);
   };
 
-  /* ---------------- LOADING UI ---------------- */
-
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[70vh] gap-3">
+      <div className="flex flex-col items-center justify-center h-screen gap-3">
         <div className="w-12 h-12 border-4 border-gray-300 border-t-primary rounded-full animate-spin"></div>
         <p className="text text-gray-500">Loading family tree...</p>
       </div>
     );
   }
-
-  /* ---------------- EMPTY STATE ---------------- */
 
   if (activeFamily && members.length === 0) {
     return (
@@ -366,7 +359,7 @@ export const FamilyTreeContent: React.FC = () => {
 
         <button
           onClick={() => handleAdd()}
-          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white"
+          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
         >
           <Plus size={16} />
           Add First Member
@@ -375,11 +368,9 @@ export const FamilyTreeContent: React.FC = () => {
     );
   }
 
-  /* ---------------- TREE ---------------- */
-
   return (
     <div className="flex-1 flex flex-col">
-      <div className="flex-1 overflow-auto px-6">
+      <div className="flex-1 overflow-auto px-6 py-4">
         <TreeLayout
           members={members}
           currentUserId={currentUserId}
@@ -413,4 +404,3 @@ export const FamilyTreeContent: React.FC = () => {
     </div>
   );
 };
-

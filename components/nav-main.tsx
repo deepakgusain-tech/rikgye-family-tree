@@ -1,18 +1,19 @@
 "use client"
 
 import { type LucideIcon } from "lucide-react"
+import Link from "next/link"
 
 import {
   Collapsible,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+
 import {
   SidebarGroup,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import Link from "next/link"
 
 export function NavMain({
   items,
@@ -41,7 +42,19 @@ export function NavMain({
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <Link href={item.url}>
-                  <SidebarMenuButton tooltip={item.title} className="cursor-pointer">
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    data-active={item.isActive}
+                    className={`
+                      cursor-pointer transition-all duration-200
+                      
+                      ${
+                        item.isActive
+                          ? "bg-emerald-600 text-white shadow-md"
+                          : "text-green-800 hover:bg-green-100 hover:text-green-900"
+                      }
+                    `}
+                  >
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                   </SidebarMenuButton>

@@ -42,23 +42,23 @@ type Template = {
 };
 
 type SettingsForm = {
-  id: string;
   siteTitle: string;
   siteKeywords: string;
   siteDescription: string;
   siteUrl: string;
-  logo?: string;
-  favicon?: string;
+  logo?: string | File;
+  favicon?: string | File;
   isSMTP: boolean;
   host: string;
   username: string;
   password: string;
   port: number | null;
+  encryption: string;
 };
 
 export default function SettingsPage() {
+
   const [formData, setFormData] = useState<SettingsForm>({
-    id: "",
     siteTitle: "",
     siteKeywords: "",
     siteDescription: "",
@@ -70,6 +70,7 @@ export default function SettingsPage() {
     username: "",
     password: "",
     port: null,
+    encryption: ""
   });
 
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -85,24 +86,33 @@ export default function SettingsPage() {
   const [templateLoading, setTemplateLoading] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
 
-  const handleFile = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: "logo" | "favicon",
-  ) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, field: "logo" | "favicon") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const preview = URL.createObjectURL(file);
+    const fData = new FormData();
+    fData.append(field, file);
+    fData.append("key", field);
+
+    const fileUploadRes = await fetch("/api/upload", {
+      method: "POST",
+      body: fData,
+    });
+
+    const data = await fileUploadRes.json();
+
+    console.log(data);
 
     setFormData({
       ...formData,
-      [field]: preview,
+      [field]: data.url,
     });
   };
 
   const getData = async () => {
     const res = await fetch("/api/settings");
     const data = await res.json();
+
     if (data) setFormData(data);
   };
 
@@ -181,7 +191,7 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="p-8 space-y-6 min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-lime-50">
+    <div className="p-8 space-y-6 min-h-screen">
       <div>
         <h1 className="text-3xl font-bold text-green-800">Settings</h1>
         <p className="text-green-700 text-sm">
@@ -218,8 +228,8 @@ export default function SettingsPage() {
 
         {/* GENERAL */}
         <TabsContent value="general">
-          <Card className="p-6 space-y-6 max-w-3xl bg-white border border-green-200 shadow-md">
-            <div className="grid gap-4">
+          <Card className="p-6 space-y-6 w-full bg-white border border-green-200 shadow-md">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-green-800">
                   Site Title
@@ -245,52 +255,50 @@ export default function SettingsPage() {
                   }
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-green-800">
+                  Logo
+                </label>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-green-800">
-                    Logo
-                  </label>
+                {formData.logo && (
+                  <div className="border rounded-md p-2 w-fit bg-green-50">
+                    <img
+                      src={formData.logo}
+                      alt="logo"
+                      className="h-12 object-contain"
+                    />
+                  </div>
+                )}
 
-                  {formData.logo && (
-                    <div className="border rounded-md p-2 w-fit bg-green-50">
-                      <img
-                        src={formData.logo}
-                        alt="logo"
-                        className="h-12 object-contain"
-                      />
-                    </div>
-                  )}
-
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFile(e, "logo")}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-green-800">
-                    Favicon
-                  </label>
-
-                  {formData.favicon && (
-                    <div className="border rounded-md p-2 w-fit bg-green-50">
-                      <img
-                        src={formData.favicon}
-                        alt="favicon"
-                        className="h-8 w-8 object-contain"
-                      />
-                    </div>
-                  )}
-
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFile(e, "favicon")}
-                  />
-                </div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFile(e, "logo")}
+                />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-green-800">
+                  Favicon
+                </label>
+
+                {formData.favicon && (
+                  <div className="border rounded-md p-2 w-fit bg-green-50">
+                    <img
+                      src={formData.favicon}
+                      alt="favicon"
+                      className="h-12 object-contain"
+                    />
+                  </div>
+                )}
+
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFile(e, "favicon")}
+                />
+              </div>
+
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-green-800">
@@ -342,7 +350,7 @@ export default function SettingsPage() {
         {/* MAIL */}
         {/* MAIL */}
         <TabsContent value="mail">
-          <Card className="p-6 space-y-6 max-w-3xl bg-white border border-green-200 shadow-md">
+          <Card className="p-6 space-y-6 w-full bg-white border border-green-200 shadow-md">
             {/* SMTP ENABLE */}
             <div className="flex items-center justify-between border rounded-lg p-4 bg-green-50">
               <div>
@@ -360,7 +368,7 @@ export default function SettingsPage() {
 
             {/* SMTP SETTINGS */}
             {formData.isSMTP && (
-              <div className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-green-800">
                     SMTP Host
@@ -374,30 +382,33 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-green-800">
-                      SMTP Port
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="587"
-                      value={formData.port ?? ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          port: Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-green-800">
+                    SMTP Port
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="587"
+                    value={formData.port ?? ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        port: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-green-800">
-                      Encryption
-                    </label>
-                    <Input placeholder="TLS / SSL" />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-green-800">
+                    Encryption
+                  </label>
+                  <Input placeholder="TLS / SSL" value={formData.encryption} onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      encryption: e.target.value,
+                    })
+                  } />
                 </div>
 
                 <div className="space-y-2">
@@ -440,7 +451,7 @@ export default function SettingsPage() {
 
         {/* TEMPLATES */}
         <TabsContent value="templates">
-          <Card className="p-6 space-y-6 max-w-3xl bg-white border border-green-200 shadow-md">
+          <Card className="p-6 space-y-6 w-full bg-white border border-green-200 shadow-md">
             <Accordion type="multiple">
               <AccordionItem value="create">
                 <AccordionTrigger className="text-green-800 font-semibold">

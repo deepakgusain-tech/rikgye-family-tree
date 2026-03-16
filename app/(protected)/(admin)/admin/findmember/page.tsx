@@ -116,7 +116,7 @@ export default function FindMember() {
   }, [citySearch, mode])
 
   return (
-    <div className="min-h-screen p-8 space-y-8 bg-gradient-to-b from-green-50 to-emerald-100">
+    <div className="min-h-screen p-8 space-y-8 ">
 
       <div>
         <h1 className="text-3xl font-serif mb-2 text-emerald-900">

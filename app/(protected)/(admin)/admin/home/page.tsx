@@ -4,9 +4,9 @@ import React from "react"
 
 const page = () => {
   return (
-    <section className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-lime-100">
+    <section className="min-h-screen">
  
-      <div className="w-full h-1 bg-gradient-to-r from-emerald-400 via-green-500 to-lime-400"></div>
+      <div className="w-full h-1"></div>
  
       <div className="max-w-6xl mx-auto p-8">
  
