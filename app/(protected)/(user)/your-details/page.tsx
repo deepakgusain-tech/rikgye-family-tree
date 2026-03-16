@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/actions/user-action";
 import { User } from "@/types";
 
 export default async function Page() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser();  
 
   if (user?.data) {
     return (

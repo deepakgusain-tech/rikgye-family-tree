@@ -189,7 +189,7 @@ const MemberFormModal = ({
                         value={field.value}
                         onValueChange={field.onChange}
                       >
-                        <SelectTrigger className="border-emerald-200 bg-white">
+                        <SelectTrigger className="border-emerald-200 bg-white w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -473,7 +473,7 @@ const MemberFormModal = ({
                         }
                       >
                         <FormControl>
-                          <SelectTrigger className="border-emerald-200 bg-white">
+                          <SelectTrigger className="border-emerald-200 bg-white w-full">
                             <SelectValue placeholder="None (root)" />
                           </SelectTrigger>
                         </FormControl>

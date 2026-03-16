@@ -314,3 +314,26 @@ export async function updatePassword(userId: string, password: string) {
    }
 
 }
+
+export async function updateProfile(user: any, id: string) {
+   try {
+      const imageValue = user.avatar instanceof File ? user.avatar.name : user.avatar ?? null
+
+      await prisma.user.update({
+         where: { id },
+         data: {
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatar: imageValue ?? user.avatar,
+         }
+      })
+
+      return { success: true }
+   } catch (error: any) {
+      return {
+         success: false,
+         message: error.message
+      }
+   }
+}

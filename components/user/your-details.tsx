@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -20,61 +20,66 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { Role } from "@/lib/generated/prisma/enums";
+import { Role, Status } from "@/lib/generated/prisma/enums";
 import { User } from "@/types";
-import { updateUser } from "@/lib/actions/user-action";
+import { updateProfile, updateUser } from "@/lib/actions/user-action";
+import { SubmitHandler, useForm } from "react-hook-form";
+import z from "zod";
+import { updateUserSchema, userSchema } from "@/lib/validators";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
+import { ArrowRight, Loader } from "lucide-react";
+import { prisma } from "@/lib/db/prisma-helper";
+import { useRouter } from "next/navigation";
 
 interface YourDetailsFormProps {
   user: User;
 }
 
-export default function YourDetailsForm({ user: initialUser }: YourDetailsFormProps) {
+export default function YourDetailsForm({ user }: YourDetailsFormProps) {
 
-  const [user, setUser] = useState<User>(initialUser);
-  const [image, setImage] = useState<any>(initialUser?.avatar || "default-avatar.png");
+  const router = useRouter()
+
+
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleImage = (file: File | null) => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setImage(url);
-  };
+  const form = useForm<z.infer<typeof updateUserSchema>>({
+    resolver: zodResolver(updateUserSchema),
+    defaultValues: user,
+  });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const [isPending, startTransition] = React.useTransition();
 
-    e.preventDefault();
+  const onSubmit: SubmitHandler<z.infer<typeof updateUserSchema>> = async (
+    values: any,
+  ) => {
+    startTransition(async () => {
+      let res;
 
-    const formData = new FormData(e.currentTarget);
+      if (values.avatar instanceof File) {
+        const formData = new FormData();
+        formData.append("avatar", values.avatar);
+        formData.append("key", "avatar");
 
-    const avatarValue: string = image ?? "default-avatar.png";
+        const fileUploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-    const updatedUser: User = {
-      ...user,
-      username: (formData.get("username") as string) || user.username,
-      firstName: (formData.get("firstName") as string) || user.firstName,
-      lastName: (formData.get("lastName") as string) || user.lastName,
-      email: (formData.get("email") as string) || user.email,
-      avatar: avatarValue,
-      password: (formData.get("password") as string) || user.password || "",
-      status: user.status,
-      role: user.role,
-    };
+        const data = await fileUploadRes.json();
 
-    try {
-      const res = await updateUser(updatedUser, user.id as string);
+        values.avatar = data.url;
+      }
+
+      res = await updateProfile(values, user.id as string)
 
       if (res.success) {
-        setUser(updatedUser);
         setDialogOpen(true);
-        e.currentTarget.reset();
+        router.refresh()
       } else {
         alert(res.message);
       }
-
-    } catch (error) {
-      console.error("Failed to update user:", error);
-      alert("Something went wrong while updating your details.");
-    }
+    });
   };
 
   return (
@@ -89,129 +94,190 @@ export default function YourDetailsForm({ user: initialUser }: YourDetailsFormPr
 
       <CardContent>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6">
-
-          {/* Profile Image */}
-
-          <div className="col-span-2 space-y-2">
-
-            <label className="text-sm font-medium text-emerald-900">
-              Profile Image
-            </label>
-
-            {image && (
-              <img
-                src={image}
-                className="w-24 h-24 rounded-full object-cover border border-emerald-200 shadow-sm"
-              />
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit(onSubmit, (errors) =>
+              console.log(errors),
             )}
+          >
+            <div className="grid grid-cols-2 gap-4">
 
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImage(e.target.files?.[0] || null)}
-              className="cursor-pointer"
-            />
+              <div className="flex flex-col gap-5 col-span-2">
+                {user?.avatar && (
+                  <div className="mt-4">
+                    <img
+                      src={user.avatar}
+                      alt=""
+                      height={100}
+                      width={100}
+                      className="w-24 h-24 rounded-full object-cover border border-emerald-200 shadow-sm"
+                    />
+                  </div>
+                )}
 
-          </div> 
-          <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="avatar"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profile Image</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          onChange={(e) => field.onChange(e.target.files?.[0])}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <label className="text-sm font-medium text-emerald-900">
-              Username
-            </label>
 
-            <Input
-              name="username"
-              placeholder="Enter your username"
-              className="focus-visible:ring-emerald-500"
-            />
+              <div className="flex flex-col gap-5">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="firstName">First name</FormLabel>
+                      <FormControl>
+                        <Input
+                          id="firstName"
+                          placeholder="Enter First name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          </div> 
-          <div className="space-y-2">
+              <div className="flex flex-col gap-5">
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="lastName">Last name</FormLabel>
+                      <FormControl>
+                        <Input
+                          id="lastName"
+                          placeholder="Enter Last Name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <label className="text-sm font-medium text-emerald-900">
-              First Name
-            </label>
+              <div className="flex flex-col gap-5">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="username">Username</FormLabel>
+                      <FormControl>
+                        <Input
+                          id="username"
+                          placeholder="Enter username"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <Input
-              name="firstName"
-              placeholder="Enter your first name"
-              className="focus-visible:ring-emerald-500"
-            />
+              <div className="flex flex-col gap-5">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="email">Email</FormLabel>
+                      <FormControl>
+                        <Input id="email" disabled placeholder="Enter email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          </div> 
-          <div className="space-y-2">
+              <div className="flex flex-col gap-5">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="password">Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          id="password"
+                          type="password"
+                          disabled
+                          placeholder="Enter password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <label className="text-sm font-medium text-emerald-900">
-              Last Name
-            </label>
+              <div className="flex flex-col gap-5">
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <FormControl>
+                        <Select
+                          defaultValue={field.value}
+                          onValueChange={(v) => field.onChange(v as Role)}
+                          disabled
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={Role.USER}>USER</SelectItem>
+                            <SelectItem value={Role.ADMIN}>ADMIN</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white  cursor-pointerflex items-center ">
+                {isPending ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )}
+                Save
+              </Button>
+            </div>
+          </form>
+        </Form>
 
-            <Input
-              name="lastName"
-              placeholder="Enter your last name"
-              className="focus-visible:ring-emerald-500"
-            />
-
-          </div> 
-          <div className="space-y-2">
-
-            <label className="text-sm font-medium text-emerald-900">
-              Role
-            </label>
-
-            <Select defaultValue={user.role} disabled>
-
-              <SelectTrigger className="w-full bg-gray-100 cursor-not-allowed">
-                <SelectValue placeholder={user.role} />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value={Role.USER}>USER</SelectItem>
-                <SelectItem value={Role.ADMIN}>ADMIN</SelectItem>
-              </SelectContent>
-
-            </Select>
-
-          </div> 
-          <div className="space-y-2">
-
-            <label className="text-sm font-medium text-emerald-900">
-              Email
-            </label>
-
-            <Input
-              name="email"
-              type="email"
-              placeholder="Enter your email address"
-              className="focus-visible:ring-emerald-500"
-            />
-
-          </div> 
-          <div className="space-y-2">
-
-            <label className="text-sm font-medium text-emerald-900">
-             Password
-            </label>
-
-            <Input
-              name="password"
-              type="password"
-              placeholder="Enter password"
-              className="focus-visible:ring-emerald-500"
-            />
-
-          </div> 
-          <div className="col-span-2">
-
-            <Button className="bg-emerald-600 hover:bg-emerald-700 w-full">
-              Save Details
-            </Button>
-
-          </div>
-
-        </form>
-
-      </CardContent> 
+      </CardContent>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 
         <DialogContent className="max-w-sm">
@@ -221,7 +287,6 @@ export default function YourDetailsForm({ user: initialUser }: YourDetailsFormPr
           </DialogHeader>
 
           <p>Details updated successfully!</p>
-
         </DialogContent>
 
       </Dialog>

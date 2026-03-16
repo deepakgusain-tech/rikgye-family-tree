@@ -185,6 +185,7 @@ const UserForm = ({ data, update = false }: UserFormProps) => {
                     <FormControl>
                       <Input
                         id="password"
+                        type="password"
                         placeholder="Enter password"
                         {...field}
                       />
@@ -195,34 +196,7 @@ const UserForm = ({ data, update = false }: UserFormProps) => {
               />
             </div>
 
-            <div className="flex flex-col gap-5">
-              <FormField
-                control={form.control}
-                name="avatar"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Avatar</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        onChange={(e) => field.onChange(e.target.files?.[0])}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                    {data?.avatar && (
-                      <div className="mt-4">
-                        <img
-                          src={data.avatar}
-                          alt=""
-                          height={100}
-                          width={100}
-                        />
-                      </div>
-                    )}
-                  </FormItem>
-                )}
-              />
-            </div>
+            
 
             <div className="flex flex-col gap-5">
               <FormField
@@ -261,6 +235,7 @@ const UserForm = ({ data, update = false }: UserFormProps) => {
                     <FormControl>
                       <Select
                         defaultValue={field.value}
+                        disabled={true}
                         onValueChange={(v) => field.onChange(v as Status)}
                       >
                         <SelectTrigger className="w-full">
