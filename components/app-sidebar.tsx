@@ -46,6 +46,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/admin/user",
       icon: IconUser,
     },
+     {
+      title: "Know Rikhye",
+      url: "/admin/prominent",
+      icon: IconSitemap,
+    },
     {
       title: "Families",
       url: "/admin/familes",

@@ -1,9 +1,17 @@
 import { Chart } from "@/components/dashboard/chart";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { getFamilyMembers } from "@/lib/actions/family-member";
+import { getUsers } from "@/lib/actions/user-action";
+import { prisma } from "@/lib/db/prisma-helper";
 import { IconSitemap } from "@tabler/icons-react";
 import { User2Icon, Users2 } from "lucide-react";
 
-export default function Page() {
+export default async function Page() {
+  const familyMembers = await prisma.familyMember.findMany();
+  const users = await getUsers();
+
+  const members = await prisma.member.findMany();
+
   return (
     <div className="space-y-6 p-4 rounded-xl min-h-screen">
       <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white">
@@ -26,21 +34,33 @@ export default function Page() {
         <Card className="shadow-md hover:shadow-lg transition bg-white/80 backdrop-blur">
           <CardContent className="flex justify-between items-center p-6">
             <span className="text-muted-foreground">Families</span>
-            <span className="text-2xl font-bold text-green-600">0</span>
+            <span className="text-2xl font-bold text-green-600">
+              {
+                familyMembers.length ?? 0
+              }
+            </span>
           </CardContent>
         </Card>
 
         <Card className="shadow-md hover:shadow-lg transition bg-white/80 backdrop-blur">
           <CardContent className="flex justify-between items-center p-6">
             <span className="text-muted-foreground">Users</span>
-            <span className="text-2xl font-bold text-green-600">0</span>
+            <span className="text-2xl font-bold text-green-600">
+              {
+                users.length ?? 0
+              }
+            </span>
           </CardContent>
         </Card>
 
         <Card className="shadow-md hover:shadow-lg transition bg-white/80 backdrop-blur">
           <CardContent className="flex justify-between items-center p-6">
             <span className="text-muted-foreground">Members</span>
-            <span className="text-2xl font-bold text-green-600">0</span>
+            <span className="text-2xl font-bold text-green-600">
+              {
+                members.length ?? 0
+              }
+            </span>
           </CardContent>
         </Card>
 
