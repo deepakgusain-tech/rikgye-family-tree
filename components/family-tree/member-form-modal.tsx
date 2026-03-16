@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 
 import { Button } from "@/components/ui/button";
-import { createFamilyMember } from "@/lib/actions/family-member";
+import { createFamilyMember, updateFamilyMember } from "@/lib/actions/family-member";
 import { Gender } from "@/lib/generated/prisma/enums";
 import { familyMemberSchema } from "@/lib/validators";
 import { familyMemberDefaultValues } from "@/lib/contants";
