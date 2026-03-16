@@ -12,7 +12,7 @@ export default async function ResetPasswordPage({ params }: {
     return (
         <div>
             <div className="flex min-h-svh w-full items-center justify-center">
-                <div className="w-full max-w-sm">
+                <div className="w-full ">
                     <ResetPasswordForm userId={id} />
                 </div>
             </div>

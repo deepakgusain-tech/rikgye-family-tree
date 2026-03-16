@@ -5,7 +5,7 @@ import { User2Icon, Users2 } from "lucide-react";
 
 export default function Page() {
   return (
-    <div className="mt-4 space-y-6 bg-gradient-to-b from-green-50 to-emerald-100 p-4 rounded-xl min-h-screen">
+    <div className=" space-y-6 bg-gradient-to-b from-green-50 to-emerald-100 p-4 rounded-xl min-h-screen">
      <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white">
   <CardContent className="flex flex-col gap-1 py-7 px-6">
 

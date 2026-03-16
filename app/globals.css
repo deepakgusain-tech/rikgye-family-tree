@@ -116,6 +116,31 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+
+.theme-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-track {
+  background: #ecfdf5;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb {
+  background: #059669;
+  border-radius: 20px;
+  border: 2px solid #ecfdf5;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #047857;
+}
+
+/* Firefox */
+.theme-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #059669 #ecfdf5;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 import { logoutUser } from "@/lib/actions/user-action";
@@ -24,7 +25,6 @@ const UserMenu = ({ user }: { user: any }) => {
 
   return (
     <DropdownMenu modal={false}>
-       
       <DropdownMenuTrigger asChild>
         <Image
           src={image}
@@ -34,17 +34,27 @@ const UserMenu = ({ user }: { user: any }) => {
           className="rounded-full border-2 border-emerald-500 object-cover cursor-pointer hover:scale-105 transition"
         />
       </DropdownMenuTrigger>
- 
+
       <DropdownMenuContent
         align="end"
-        className="w-48 border border-emerald-100 shadow-md"
+        className="w-56 border border-emerald-200 shadow-lg bg-white"
       >
+
+        <div className="px-3 py-2 border-b border-emerald-100">
+          <p className="text-sm font-semibold text-gray-800 truncate">
+            {user.name}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">
+            {user.email}
+          </p>
+        </div>
 
         {user.role === "ADMIN" && (
           <>
-            {/* Profile */}
-
-            <DropdownMenuItem asChild className="cursor-pointer">
+            <DropdownMenuItem
+              asChild
+              className="cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50"
+            >
               <Link
                 href="/admin/profile"
                 className="flex items-center gap-2"
@@ -53,8 +63,11 @@ const UserMenu = ({ user }: { user: any }) => {
                 Profile
               </Link>
             </DropdownMenuItem>
- 
-            <DropdownMenuItem asChild className="cursor-pointer">
+
+            <DropdownMenuItem
+              asChild
+              className="cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50"
+            >
               <Link
                 href="/admin/settings"
                 className="flex items-center gap-2"
@@ -63,11 +76,13 @@ const UserMenu = ({ user }: { user: any }) => {
                 Settings
               </Link>
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
           </>
         )}
- 
+
         <DropdownMenuItem
-          className="cursor-pointer text-red-500 focus:text-red-600 flex items-center gap-2"
+          className="cursor-pointer text-red-500 flex items-center gap-2 hover:bg-emerald-50 focus:bg-emerald-50"
           onClick={() => logoutUser()}
         >
           <LogOut size={16} />
