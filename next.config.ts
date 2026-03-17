@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb", // increase limit
     },
   },
+  images: {
+    localPatterns: [
+      {
+        pathname: "/uploads/**",
+      },
+      {
+        pathname: "/api/uploads/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

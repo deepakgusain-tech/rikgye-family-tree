@@ -15,11 +15,16 @@ import defaultImage from "@/assets/images/no_profile_pic.jpg";
 import Link from "next/link";
 
 import { CircleUser, SlidersHorizontal, LogOut } from "lucide-react";
+import { useSession } from "next-auth/react";
 
-const UserMenu = ({ user }: { user: any }) => {
-  let image = defaultImage;
+const UserMenu = () => {
+  const { data: session } = useSession();
 
-  if (user.image) {
+  const user = session?.user;
+
+  let image: any = defaultImage;
+
+  if (user?.image) {
     image = user.image;
   }
 
@@ -28,8 +33,12 @@ const UserMenu = ({ user }: { user: any }) => {
       <DropdownMenuTrigger asChild>
         <div className="w-9 h-9 rounded-full border-2 border-emerald-500 overflow-hidden cursor-pointer hover:scale-105 transition shrink-0">
           <Image
-            src={image}
-            alt={user.name}
+            src={user?.image
+              ? `/api${user.image}?t=${Date.now()}`
+              : defaultImage
+            }
+            unoptimized
+            alt={user?.name || "user"}
             width={36}
             height={36}
             className="w-full h-full object-cover"
@@ -43,29 +52,23 @@ const UserMenu = ({ user }: { user: any }) => {
       >
         <div className="px-3 py-2 border-b border-emerald-100">
           <p className="text-sm font-semibold text-gray-800 truncate">
-            {user.name}
+            {user?.name}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            {user.email}
+            {user?.email}
           </p>
         </div>
 
-        {user.role === "ADMIN" && (
+        {user?.role === "ADMIN" && (
           <>
-            <DropdownMenuItem
-              asChild
-              className="cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50"
-            >
+            <DropdownMenuItem asChild>
               <Link href="/admin/profile" className="flex items-center gap-2">
                 <CircleUser size={16} />
                 Profile
               </Link>
             </DropdownMenuItem>
 
-            <DropdownMenuItem
-              asChild
-              className="cursor-pointer hover:bg-emerald-50 focus:bg-emerald-50"
-            >
+            <DropdownMenuItem asChild>
               <Link href="/admin/settings" className="flex items-center gap-2">
                 <SlidersHorizontal size={16} />
                 Settings
@@ -77,7 +80,7 @@ const UserMenu = ({ user }: { user: any }) => {
         )}
 
         <DropdownMenuItem
-          className="cursor-pointer text-red-500 flex items-center gap-2 hover:bg-emerald-50 focus:bg-emerald-50"
+          className="cursor-pointer text-red-500 flex items-center gap-2"
           onClick={() => logoutUser()}
         >
           <LogOut size={16} />

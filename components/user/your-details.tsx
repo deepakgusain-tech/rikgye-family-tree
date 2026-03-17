@@ -31,6 +31,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { ArrowRight, Loader } from "lucide-react";
 import { prisma } from "@/lib/db/prisma-helper";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface YourDetailsFormProps {
   user: User;
@@ -39,7 +40,7 @@ interface YourDetailsFormProps {
 export default function YourDetailsForm({ user }: YourDetailsFormProps) {
 
   const router = useRouter()
-
+  const { update } = useSession();
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -53,6 +54,7 @@ export default function YourDetailsForm({ user }: YourDetailsFormProps) {
   const onSubmit: SubmitHandler<z.infer<typeof updateUserSchema>> = async (
     values: any,
   ) => {
+
     startTransition(async () => {
       let res;
 
@@ -73,7 +75,14 @@ export default function YourDetailsForm({ user }: YourDetailsFormProps) {
 
       res = await updateProfile(values, user.id as string)
 
+
       if (res.success) {
+
+        await update({
+          name: values.firstName,
+          image: values.avatar,
+        });
+
         setDialogOpen(true);
         router.refresh()
       } else {
@@ -104,6 +113,7 @@ export default function YourDetailsForm({ user }: YourDetailsFormProps) {
             <div className="grid grid-cols-2 gap-4">
 
               <div className="flex flex-col gap-5 col-span-2">
+                
                 {user?.avatar && (
                   <div className="mt-4">
                     <img

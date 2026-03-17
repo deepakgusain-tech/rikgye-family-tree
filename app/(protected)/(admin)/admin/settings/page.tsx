@@ -263,7 +263,7 @@ export default function SettingsPage() {
                 {formData.logo && (
                   <div className="border rounded-md p-2 w-fit bg-green-50">
                     <img
-                      src={formData.logo}
+                      src={ "/api/" + formData.logo}
                       alt="logo"
                       className="h-12 object-contain"
                     />
@@ -285,7 +285,7 @@ export default function SettingsPage() {
                 {formData.favicon && (
                   <div className="border rounded-md p-2 w-fit bg-green-50">
                     <img
-                      src={formData.favicon}
+                      src={ "/api/" + formData.favicon}
                       alt="favicon"
                       className="h-12 object-contain"
                     />

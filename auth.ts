@@ -66,7 +66,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             session.user.role = token.role as string
             session.user.name = token.name
             session.user.email = token.email
-
+           
             // if there is an update , set the user name
             if (trigger === "update") {
                 session.user.image = user.avatar
@@ -81,6 +81,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 token.role = user.role
                 token.name = user.name;
                 token.email = user.email;
+                token.image = user.avatar;
+                
+
+                // 👉 On session update (IMPORTANT)
+                if (session) {
+                    token.name = session.name;
+                    token.image = session.image;
+                }
 
                 await prisma.user.update({
                     where: { id: user.id },
