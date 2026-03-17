@@ -35,7 +35,7 @@ export default async function RootLayout({
                             className="mx-2 data-[orientation=vertical]:h-4"
                         />
                         <div className="ml-auto flex items-center">
-                            <UserMenu user={session.user} />
+                            <UserMenu />
                         </div>
                     </div>
                 </header>

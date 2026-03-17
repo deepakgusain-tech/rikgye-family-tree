@@ -45,7 +45,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
             />
 
             <div className="ml-auto flex items-center">
-              <UserMenu user={session.user} />
+              <UserMenu />
             </div>
           </div>
         </header> 
