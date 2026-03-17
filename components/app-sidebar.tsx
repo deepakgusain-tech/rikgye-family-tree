@@ -47,7 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: IconUser,
     },
      {
-      title: "Know Rikhye",
+      title: "Known Rikhye",
       url: "/admin/prominent",
       icon: IconSitemap,
     },
@@ -93,8 +93,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent
         className="
-        px-2 py-4
-        [&_[data-sidebar=menu-button]]:rounded-xl
+         py-4
+        [&_[data-sidebar=menu-button]]:rounded-xxl
         [&_[data-sidebar=menu-button]]:transition-all
         [&_[data-sidebar=menu-button]]:duration-200
         [&_[data-sidebar=menu-button]]:text-green-800

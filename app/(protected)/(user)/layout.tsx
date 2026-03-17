@@ -32,25 +32,28 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
   return (
     <SidebarProvider>
-      <UserSideBar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center border-b gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+      <UserSideBar /> 
+      <SidebarInset className="min-h-screen bg-emerald-50">
+         
+        <header className="flex h-16 shrink-0 items-center border-b border-emerald-200 bg-white/80 backdrop-blur-sm  transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
           <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6 my-2">
             <SidebarTrigger className="-ml-1" />
+
             <Separator
               orientation="vertical"
-              className="mx-2 data-[orientation=vertical]:h-4"
+              className="mx-2 data-[orientation=vertical]:h-4 bg-emerald-200"
             />
+
             <div className="ml-auto flex items-center">
               <UserMenu user={session.user} />
             </div>
           </div>
-        </header>
+        </header> 
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {children}
         </div>
+
       </SidebarInset>
     </SidebarProvider>
-
   )
 }
