@@ -58,7 +58,7 @@ type SettingsForm = {
 
 export default function SettingsPage() {
 
-  const [formData, setFormData] = useState<SettingsForm>({
+  const [formData, setFormData] = useState<any>({
     siteTitle: "",
     siteKeywords: "",
     siteDescription: "",
@@ -122,7 +122,7 @@ export default function SettingsPage() {
     await fetch("/api/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
+      body: JSON.stringify({ ...formData, id: formData?.id ?? "" }),
     });
 
     setLoading(false);
