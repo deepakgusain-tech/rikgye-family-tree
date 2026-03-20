@@ -31,7 +31,10 @@ import {
 } from "@/components/ui/select";
 
 import { Button } from "@/components/ui/button";
-import { createFamilyMember, updateFamilyMember } from "@/lib/actions/family-member";
+import {
+  createFamilyMember,
+  updateFamilyMember,
+} from "@/lib/actions/family-member";
 import { Gender } from "@/lib/generated/prisma/enums";
 import { familyMemberSchema } from "@/lib/validators";
 import { familyMemberDefaultValues } from "@/lib/contants";
@@ -63,71 +66,128 @@ const MemberFormModal = ({
     resolver: zodResolver(familyMemberSchema) as any,
     defaultValues: editingMember
       ? { ...familyMemberDefaultValues, ...editingMember }
-      : { ...familyMemberDefaultValues, parentId: defaultParentId ?? null },
+      : {
+          ...familyMemberDefaultValues,
+          parentId: defaultParentId ?? null,
+          relation: "",
+        },
   });
 
   useEffect(() => {
     if (editingMember) {
-      form.reset(editingMember);
+      const formatDate = (date: any) => {
+        if (!date) return "";
+        if (typeof date === "string") return date.split("T")[0];
+        return new Date(date).toISOString().split("T")[0];
+      };
+
+      form.reset({
+        ...editingMember,
+        relation: (editingMember as any)?.relation ?? "",
+        birthDate: formatDate(editingMember.birthDate),
+        marriageDate: formatDate(editingMember.marriageDate),
+      });
     } else {
       form.reset({
         ...familyMemberDefaultValues,
         parentId: defaultParentId ?? null,
+        relation: "",
       });
     }
   }, [editingMember, defaultParentId]);
 
+  // ================= SUBMIT =================
   const handleFormSubmit: SubmitHandler<FormData> = async (values) => {
-
     const imageUrl = typeof values.image === "string" ? values.image : "";
+
+    let parentId = values.parentId ?? null;
+    let spouseId: string | null = null;
+    const relation = values.relation;
+
+    // ===== RELATION LOGIC =====
+    if (relation === "CHILD" || relation === "STEP_CHILD") {
+      parentId = values.parentId;
+    }
+
+    if (relation === "FATHER" || relation === "MOTHER") {
+      parentId = null;
+    }
+
+    if (relation === "WIFE" || relation === "SPOUSE") {
+      spouseId = values.parentId ?? null;
+      parentId = null;
+    }
+
+    if (relation === "EX_WIFE") {
+      spouseId = values.parentId ?? null;
+      parentId = null;
+    }
+
+    // ===== CREATE / UPDATE =====
     if (!editingMember) {
+      const isParent = relation === "FATHER" || relation === "MOTHER";
+
       const newMember: any = await createFamilyMember({
         ...values,
+        relation,
+        spouseId,
+        parentId: isParent ? null : parentId,
         image: imageUrl,
         gender: values.gender ?? Gender.OTHER,
-        parentId: values.parentId ?? null,
         userId: values.userId ?? null,
       });
-      onSubmit(newMember);
 
-    }
-    else {
+      // 🔥 FIX: link child to new parent
+      if (isParent && values.parentId) {
+        await updateFamilyMember({
+          id: values.parentId, // child
+          parentId: newMember.id, // new parent
+        });
+      }
+
+      onSubmit(newMember);
+    } else {
       const updatedMember: any = await updateFamilyMember({
         ...editingMember,
         ...values,
+        relation,
+        spouseId,
+        parentId,
         image: imageUrl,
         gender: values.gender ?? Gender.OTHER,
-        parentId: values.parentId ?? null,
         userId: values.userId ?? null,
       });
-      onSubmit(updatedMember);
 
+      onSubmit(updatedMember);
     }
 
     onClose();
   };
 
+  const isAlive = form.watch("isAlive");
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="theme-scrollbar sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-emerald-200 bg-emerald-50 p-0 shadow-lg [&>button]:hidden">
-        <DialogHeader className="bg-emerald-700 text-white px-6 py-4 flex flex-row items-center justify-between">
-          <DialogTitle className="text-lg font-semibold">
-            {editingMember ? "Edit Member" : "Add Family Member"}
-          </DialogTitle>
+        {/* HEADER */}
+        <DialogHeader className="bg-emerald-700 text-white px-6 py-4">
+          <div className="flex items-center justify-between w-full">
+            <DialogTitle className="text-lg font-semibold">
+              {editingMember ? "Edit Member" : "Add Family Member"}
+            </DialogTitle>
 
-          <button
-            onClick={onClose}
-            className="rounded-md p-1.5 hover:bg-emerald-600 transition-colors"
-          >
-            <X className="h-5 w-5 text-white" />
-          </button>
+            <button onClick={onClose} className="ml-auto">
+              <X className="h-5 w-5 text-white" />
+            </button>
+          </div>
         </DialogHeader>
 
+        {/* FORM */}
         <div className="p-6">
           <Form {...form}>
             <form
-              className="space-y-4"
               onSubmit={form.handleSubmit(handleFormSubmit)}
+              className="space-y-4"
             >
               <div className="grid grid-cols-2 gap-4">
                 {/* NAME */}
@@ -136,15 +196,8 @@ const MemberFormModal = ({
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Full name"
-                          className="border-emerald-200 focus-visible:ring-emerald-500 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Name</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
@@ -155,25 +208,46 @@ const MemberFormModal = ({
                   name="image"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">Image</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="file"
-                          className="border-emerald-200 focus-visible:ring-emerald-500 bg-white"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
+                      <FormLabel>Image</FormLabel>
+                      <Input
+                        type="file"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onloadend = () =>
+                            field.onChange(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </FormItem>
+                  )}
+                />
 
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              field.onChange(reader.result as string);
-                            };
-
-                            reader.readAsDataURL(file);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                {/* RELATION */}
+                <FormField
+                  control={form.control}
+                  name="relation"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Relation</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select relation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FATHER">Father</SelectItem>
+                          <SelectItem value="MOTHER">Mother</SelectItem>
+                          <SelectItem value="CHILD">Child</SelectItem>
+                          <SelectItem value="STEP_CHILD">Step Child</SelectItem>
+                          <SelectItem value="WIFE">Wife</SelectItem>
+                          <SelectItem value="EX_WIFE">Ex Wife</SelectItem>
+                          <SelectItem value="SPOUSE">Spouse</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </FormItem>
                   )}
                 />
@@ -184,12 +258,12 @@ const MemberFormModal = ({
                   name="gender"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">Gender</FormLabel>
+                      <FormLabel>Gender</FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
                       >
-                        <SelectTrigger className="border-emerald-200 bg-white w-full">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -198,106 +272,82 @@ const MemberFormModal = ({
                           <SelectItem value={Gender.OTHER}>Other</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* BIRTH DATE */}
+                {/* BIRTH */}
                 <FormField
                   control={form.control}
                   name="birthDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Birth Date
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Birth Date</FormLabel>
+                      <Input type="date" {...field} />
                     </FormItem>
                   )}
                 />
 
-                {/* BIRTH PLACE */}
                 <FormField
                   control={form.control}
                   name="birthPlace"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Birth Place
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Birth place"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Birth Place</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
 
+                {/* ALIVE */}
                 <FormField
                   control={form.control}
                   name="isAlive"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between border border-emerald-200 rounded-lg p-3 bg-white">
-                      <FormLabel className="m-0 text-emerald-800">
-                        Is Alive
-                      </FormLabel>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
+                    <FormItem className="flex justify-between p-3 border rounded-lg">
+                      <FormLabel>Is Alive</FormLabel>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormItem>
                   )}
                 />
 
+                {!isAlive && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="causeOfDeath"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cause of Death</FormLabel>
+                          <Input {...field} />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="deathDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date of Death</FormLabel>
+                          <Input type="date" {...field} />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                {/* REST FIELDS */}
                 <FormField
                   control={form.control}
                   name="currentResidence"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Current Residence
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="City / Country"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="causeOfDeath"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Cause of Death
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Cause of death"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Current Residence</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
@@ -307,17 +357,8 @@ const MemberFormModal = ({
                   name="marriageDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Marriage Date
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Marriage Date</FormLabel>
+                      <Input type="date" {...field} />
                     </FormItem>
                   )}
                 />
@@ -327,17 +368,8 @@ const MemberFormModal = ({
                   name="marriagePlace"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Marriage Place
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Marriage place"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Marriage Place</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
@@ -347,17 +379,8 @@ const MemberFormModal = ({
                   name="spouseMaidenName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Spouse Maiden Name
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Spouse maiden name"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Spouse Maiden Name</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
@@ -367,17 +390,8 @@ const MemberFormModal = ({
                   name="spouseFather"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Spouse Father
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Spouse father name"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Spouse Father</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
@@ -387,17 +401,8 @@ const MemberFormModal = ({
                   name="spouseMother"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Spouse Mother
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Spouse mother name"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Spouse Mother</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
@@ -407,17 +412,8 @@ const MemberFormModal = ({
                   name="profession"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">
-                        Profession
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Profession"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Profession</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
@@ -427,16 +423,8 @@ const MemberFormModal = ({
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="Email"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Email</FormLabel>
+                      <Input type="email" {...field} />
                     </FormItem>
                   )}
                 />
@@ -446,71 +434,48 @@ const MemberFormModal = ({
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-emerald-800">Phone</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Phone number"
-                          className="border-emerald-200 bg-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel>Phone</FormLabel>
+                      <Input {...field} />
                     </FormItem>
                   )}
                 />
 
+                {/* PARENT */}
                 <FormField
                   control={form.control}
                   name="parentId"
                   render={() => (
                     <FormItem className="col-span-2">
-                      <FormLabel className="text-emerald-800">Parent</FormLabel>
-
+                      <FormLabel>Select Person</FormLabel>
                       <Select
                         value={form.getValues("parentId") ?? "__none__"}
                         onValueChange={(v) =>
                           form.setValue("parentId", v === "__none__" ? null : v)
                         }
                       >
-                        <FormControl>
-                          <SelectTrigger className="border-emerald-200 bg-white w-full">
-                            <SelectValue placeholder="None (root)" />
-                          </SelectTrigger>
-                        </FormControl>
-
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">None (root)</SelectItem>
-
-                          {existingMembers
-                            .filter((m) => m && m.id)
-                            .map((m) => (
-                              <SelectItem key={m.id} value={m.id}>
-                                {m.name}
-                              </SelectItem>
-                            ))}
+                          <SelectItem value="__none__">None</SelectItem>
+                          {existingMembers.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="flex gap-3 justify-end pt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                >
+              {/* BUTTONS */}
+              <div className="flex justify-end gap-3 pt-3">
+                <Button type="button" variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-
-                <Button
-                  type="submit"
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white"
-                >
+                <Button type="submit">
                   {editingMember ? "Save Changes" : "Add Member"}
                 </Button>
               </div>

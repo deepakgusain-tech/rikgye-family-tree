@@ -12,16 +12,20 @@ import { DeleteMemberDialog } from "./delete-member-modal";
 import { deleteFamilyMember } from "@/lib/actions/family-member";
 import { getCurrentUser } from "@/lib/actions/user-action";
 
-const CARD_W = 150;
-const CARD_H = 170;
+/* ---------------- CONFIG ---------------- */
 
-function buildTree(members: FamilyMember[]): RawNodeDatum[] {
+const CARD_W = 150;
+const CARD_H = 180;
+
+/* ---------------- TREE BUILDER ---------------- */
+
+function buildTree(members: any[]): RawNodeDatum[] {
   const map = new Map<string, RawNodeDatum>();
 
   members.forEach((m) => {
     map.set(m.id, {
       name: m.name,
-      attributes: { id: m.id },
+      attributes: { id: m.id, relationType: m.relationType },
       children: [],
     });
   });
@@ -42,32 +46,38 @@ function buildTree(members: FamilyMember[]): RawNodeDatum[] {
   return roots;
 }
 
-/* ---------------- CENTERED STEP PATH ---------------- */
-
-const centeredStepPath = (linkDatum: any, orientation: string) => {
+/* ---------------- PATH ---------------- */
+const centeredStepPath = (linkDatum: any) => {
   const { source, target } = linkDatum;
 
-  if (orientation === "vertical") {
-    const startX = source.x;
-    const startY = source.y + CARD_H / 2;
+  const startX = source.x;
+  const startY = source.y + CARD_H / 2;
 
-    const endX = target.x;
-    const endY = target.y - CARD_H / 2;
+  const endX = target.x;
+  const endY = target.y - CARD_H / 2;
 
-    const midY = startY + (endY - startY) / 2;
+  const midY = (startY + endY) / 2;
 
-    return `
-      M ${startX},${startY}
-      V ${midY}
-      H ${endX}
-      V ${endY}
-    `;
-  }
-
-  return "";
+  return `
+    M ${startX},${startY}
+    V ${midY}
+    H ${endX}
+    V ${endY}
+  `;
 };
 
-/* ---------------- NODE CARD ---------------- */
+
+/* ---------------- LINK STYLE ---------------- */
+
+const getLinkClass = (linkDatum: any) => {
+  const relation = linkDatum.target.data?.attributes?.relationType;
+
+  if (relation === "EX") return "stroke-red";
+  if (relation === "STEP") return "stroke-dashed";
+  return "stroke-normal";
+};
+
+/* ---------------- NODE CARD (UPDATED ONLY UI) ---------------- */
 
 const NodeCard = ({
   nodeDatum,
@@ -87,120 +97,128 @@ const NodeCard = ({
   const isOwner = member.userId === currentUserId;
 
   const canEdit = isAdmin || isOwner;
-  const canDelete = isAdmin || isOwner;
+  const isMale = member.gender === "MALE";
 
-  const isAlive = member.isAlive;
+  const birthYear = member.birthDate
+    ? new Date(member.birthDate).getFullYear()
+    : "";
+
+  const deathYear = member.deathDate
+    ? new Date(member.deathDate).getFullYear()
+    : "";
 
   return (
     <g>
       <foreignObject
-        x={-CARD_W / 2 - 60} 
+        x={-CARD_W / 2 }
         y={-CARD_H / 2}
-        width={CARD_W + 60}
+        width={CARD_W + 80}
         height={CARD_H}
-        style={{ overflow: "visible", pointerEvents: "all" }}
+        style={{ overflow: "visible" }}
       >
-        <div className="relative flex items-center group h-full">
+        <div className="relative group flex items-center h-full ">
 
-          {/* Hover bridge */}
-          <div className="absolute left-0 top-0 h-full w-16"></div>
-
-          {/* ACTION BUTTONS */}
-          <div
-            className="absolute left-0 top-1/2 -translate-y-1/2
-            flex flex-col gap-1 bg-white shadow-lg rounded-lg p-1 border
-            opacity-0 group-hover:opacity-100
-            transition-all duration-200 z-10"
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onAdd(member);
-              }}
-              className="p-2 rounded-md hover:bg-green-500 hover:text-white"
-            >
-              <Plus size={13} />
+          {/* ACTION PANEL */}
+          <div className="absolute -left-16 top-1/2 -translate-y-1/2 flex flex-col gap-2
+  bg-white/80 backdrop-blur-xl border border-white/40
+  shadow-xl rounded-xl p-2
+  opacity-0 group-hover:opacity-100
+  -translate-x-2 group-hover:translate-x-0
+  transition-all duration-300 z-20"
+>
+            <button onClick={(e)=>{e.stopPropagation();onAdd(member)}} className="p-2 hover:bg-green-500 hover:text-white rounded-lg transition">
+              <Plus size={14}/>
             </button>
 
             {canEdit && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(member);
-                }}
-                className="p-2 rounded-md hover:bg-blue-500 hover:text-white"
-              >
-                <Pencil size={13} />
+              <button onClick={(e)=>{e.stopPropagation();onEdit(member)}} className="p-2 hover:bg-blue-500 hover:text-white rounded-lg transition">
+                <Pencil size={14}/>
               </button>
             )}
 
-            {canDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(member);
-                }}
-                className="p-2 rounded-md hover:bg-red-500 hover:text-white"
-              >
-                <Trash2 size={13} />
-              </button>
-            )}
+            <button onClick={(e)=>{e.stopPropagation();onDelete(member)}} className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition">
+              <Trash2 size={14}/>
+            </button>
           </div>
 
           {/* CARD */}
           <div
-            onClick={() => onView(member)}
-            className={`ml-16 relative bg-white rounded-xl flex flex-col items-center cursor-pointer
-              transition-all duration-300
-              border border-gray-300 border-t-4
-              ${
-                isAlive
-                  ? "border-t-green-500 hover:shadow-[0_0_18px_rgba(34,197,94,0.5)]"
-                  : "border-t-red-500 hover:shadow-[0_0_18px_rgba(239,68,68,0.5)]"
+            onClick={()=>onView(member)}
+            className={` relative flex flex-col items-center cursor-pointer
+              transition-all duration-300 ease-out
+              hover:scale-105 
+              border backdrop-blur-xl overflow-hidden
+              ${isMale
+                ? "bg-gradient-to-br from-indigo-100/70 to-slate-100/60 border-indigo-200 rounded-2xl"
+                : "bg-gradient-to-br from-pink-100/70 to-rose-100/60 border-pink-200 rounded-[30px]"
               }
-              hover:scale-[1.03]
-            `}
+              shadow-lg hover:shadow-2xl`}
             style={{ width: CARD_W, height: CARD_H }}
           >
-            <div className="mt-3">
+
+            {/* GLOW */}
+            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-300 blur-2xl
+              ${isMale ? "bg-indigo-300/20" : "bg-pink-300/20"}`} />
+
+            {/* TOP BAR */}
+            <div className={`absolute top-0 left-0 w-full h-[5px]
+              ${isMale ? "bg-indigo-500" : "bg-pink-500"}`} />
+
+            {/* IMAGE */}
+            <div className="mt-4">
               {member.image ? (
                 <img
                   src={member.image}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
+                  className={`w-16 h-16 object-cover object-[center_20%] shadow-lg border-2 
+                    ${isMale ? "rounded-xl border-indigo-400 " : "rounded-full border-pink-300"}`}
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center font-bold text-lg shadow">
+                <div className={`w-16 h-16  flex items-center justify-center text-white font-bold shadow-lg
+                  ${isMale ? "rounded-xl bg-indigo-400" : "rounded-full bg-pink-400"}`}>
                   {member.name.charAt(0)}
                 </div>
               )}
             </div>
 
-            <p className="mt-2 text-sm font-semibold text-gray-800 text-center px-1 line-clamp-1">
+            {/* NAME */}
+            <p className="mt-2 text-sm font-semibold text-gray-800 text-center px-2">
               {member.name}
             </p>
 
+            {/* LIFE */}
+            <p className="text-[11px] text-gray-600">
+              {member.isAlive
+                ? birthYear
+                : `${birthYear} - ${deathYear || "—"}`}
+            </p>
+
+            {/* LOCATION */}
+            {member.isAlive && member.currentResidence && (
+              <p className="text-[10px] text-gray-500 truncate px-2">
+                {member.currentResidence}
+              </p>
+            )}
+
+            {/* PROFESSION */}
             {member.profession && (
-              <p className="text-xs text-gray-500 text-center px-1 line-clamp-1">
+              <p className="text-[10px] text-gray-400 truncate px-2">
                 {member.profession}
               </p>
             )}
 
-            {member.birthDate && (
-              <p className="text-[11px] text-gray-400 mt-1">
-                {new Date(member.birthDate).getFullYear()}
+            {/* DEATH */}
+            {!member.isAlive && member.causeOfDeath && (
+              <p className="text-[10px] text-red-500 truncate px-2">
+                {member.causeOfDeath}
               </p>
             )}
 
-            <span
-              className={`absolute top-2 right-2 text-[10px] px-2 py-[2px] rounded-full font-medium
-                ${
-                  isAlive
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-600"
-                }`}
-            >
-              {isAlive ? "Alive" : "Dead"}
+            {/* STATUS */}
+            <span className={`absolute top-2 right-2 text-[10px] px-2 py-[3px] rounded-full
+              ${member.isAlive ? "bg-green-200 text-green-700" : "bg-red-200 text-red-600"}`}>
+              {member.isAlive ? "Alive" : "Dead"}
             </span>
+
           </div>
         </div>
       </foreignObject>
@@ -219,6 +237,7 @@ const TreeLayout = ({
   onDelete,
   onView,
 }: any) => {
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
 
@@ -241,9 +260,15 @@ const TreeLayout = ({
   );
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const { width } = containerRef.current.getBoundingClientRect();
-    setTranslate({ x: width / 2, y: 100 });
+    const update = () => {
+      if (!containerRef.current) return;
+      const { width } = containerRef.current.getBoundingClientRect();
+      setTranslate({ x: width / 2, y: 120 });
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, [members]);
 
   const data: RawNodeDatum =
@@ -252,22 +277,30 @@ const TreeLayout = ({
       : { name: "Family", attributes: { id: "__root__" }, children: treeData };
 
   return (
-    <div ref={containerRef} className="w-full h-[85vh] bg-gray-50">
+    <div
+      ref={containerRef}
+      className="w-full h-[85vh]
+      bg-gradient-to-br from-slate-50 via-white to-indigo-50"
+    >
       <Tree
         data={data}
         orientation="vertical"
         translate={translate}
         pathFunc={centeredStepPath}
-        nodeSize={{ x: 260, y: 220 }}
-        separation={{ siblings: 1.2, nonSiblings: 1.6 }}
-        depthFactor={220}
+        pathClassFunc={getLinkClass}
+        nodeSize={{ x: 280, y: 240 }}
+        separation={{ siblings: 1.3, nonSiblings: 1.7 }}
+        depthFactor={240}
         renderCustomNodeElement={renderNode}
-        collapsible={false}
         zoomable
+        transitionDuration={400}
+        collapsible={false}
       />
     </div>
   );
 };
+
+/* ---------------- MAIN ---------------- */
 
 export const FamilyTreeContent = () => {
   const [mounted, setMounted] = useState(false);
@@ -292,7 +325,6 @@ export const FamilyTreeContent = () => {
       setCurrentUserId(user?.data?.id ?? null);
       setCurrentUserRole(user?.data?.role ?? null);
     };
-
     loadUser();
     setMounted(true);
   }, []);
@@ -315,9 +347,9 @@ export const FamilyTreeContent = () => {
 
   const handleSubmit = (member: any) => {
     if (!activeFamily) return;
-
-    if (editingMember) editMember(activeFamily.id, member);
-    else addMember(activeFamily.id, member);
+    editingMember
+      ? editMember(activeFamily.id, member)
+      : addMember(activeFamily.id, member);
   };
 
   const handleDeleteConfirm = async () => {
@@ -327,7 +359,6 @@ export const FamilyTreeContent = () => {
     deleteMember(activeFamily.id, deletingMember.id, false);
 
     setShowDeleteDialog(false);
-    setDeletingMember(null);
   };
 
   if (!mounted) return null;
