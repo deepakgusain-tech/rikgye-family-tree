@@ -73,7 +73,7 @@ export const passwordSchema = z
 
 export const familyMemberSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  image: z.string().min(1, "Image is required"),
+  image: z.array(z.string().min(1, "Image is required")),
   gender: z.enum(Object.values(Gender)),
   birthDate: z.string().min(1, "Date of Birth is required"),
   birthPlace: z.string().min(1, "Place of Birth is requird"),
