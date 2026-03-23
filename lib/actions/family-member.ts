@@ -29,6 +29,7 @@ export interface FamilyMemberTree {
   userId: string;
   children: FamilyMemberTree[];
 }
+
 export async function createFamilyMember(data: Omit<any, "id">) {
   const currentUser = await getCurrentUser();
 
@@ -39,7 +40,6 @@ export async function createFamilyMember(data: Omit<any, "id">) {
   const parentId = data.parentId ?? null;
 
   return await prisma.$transaction(async (tx) => {
-    // Get existing member
     const existingMember = parentId
       ? await tx.familyMember.findUnique({
           where: { id: parentId },
@@ -48,13 +48,14 @@ export async function createFamilyMember(data: Omit<any, "id">) {
 
     let parentToAssign: string | null = null;
 
+    // ✅ Father logic (same as before)
     if (data.relation === "FATHER") {
       parentToAssign = existingMember?.parentId ?? null;
     } else {
       parentToAssign = parentId;
     }
 
-    // ✅ Create new member
+    // ✅ Create member FIRST (without spouseId)
     const member = await tx.familyMember.create({
       data: {
         name: data.name,
@@ -86,7 +87,30 @@ export async function createFamilyMember(data: Omit<any, "id">) {
       },
     });
 
-    // ✅ Relink child → new father (CRITICAL)
+    // 🔥 ✅ SPOUSE LINKING (NEW LOGIC)
+    if (data.spouseId) {
+      // update current member
+      await tx.familyMember.update({
+        where: { id: member.id },
+        data: {
+          spouse: {
+            connect: { id: data.spouseId },
+          },
+        },
+      });
+
+      // update spouse (reverse link)
+      await tx.familyMember.update({
+        where: { id: data.spouseId },
+        data: {
+          spouse: {
+            connect: { id: member.id },
+          },
+        },
+      });
+    }
+
+    // ✅ Relink child → new father
     if (data.relation === "FATHER" && parentId) {
       await tx.familyMember.update({
         where: { id: parentId },
@@ -151,39 +175,80 @@ export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
 
 
 export async function updateFamilyMember(data: any) {
-  const updated = await prisma.familyMember.update({
-    where: { id: data.id },
-    data: {
-      name: data.name,
-      image: data.image,
-      gender: data.gender,
+  return await prisma.$transaction(async (tx) => {
+    // 🔍 get existing member
+    const existing = await tx.familyMember.findUnique({
+      where: { id: data.id },
+      select: { spouseId: true },
+    });
 
-      birthDate: data.birthDate ? new Date(data.birthDate) : null,
-      birthPlace: data.birthPlace,
+    const oldSpouseId = existing?.spouseId ?? null;
+    const newSpouseId = data.spouseId ?? null;
 
-      isAlive: data.isAlive,
-      currentResidence: data.currentResidence,
+    // ✅ 1. update main member
+    const updated = await tx.familyMember.update({
+      where: { id: data.id },
+      data: {
+        name: data.name,
+        image: data.image,
+        gender: data.gender,
 
-      deathDate: data.deathDate ? new Date(data.deathDate) : null,
-      deathPlace: data.deathPlace,
-      causeOfDeath: data.causeOfDeath,
+        birthDate: data.birthDate ? new Date(data.birthDate) : null,
+        birthPlace: data.birthPlace,
 
-      marriageDate: data.marriageDate ? new Date(data.marriageDate) : null,
-      marriagePlace: data.marriagePlace,
+        isAlive: data.isAlive,
+        currentResidence: data.currentResidence,
 
-      spouseFather: data.spouseFather,
-      spouseMother: data.spouseMother,
-      spouseMaidenName: data.spouseMaidenName,
+        deathDate: data.deathDate ? new Date(data.deathDate) : null,
+        deathPlace: data.deathPlace,
+        causeOfDeath: data.causeOfDeath,
 
-      profession: data.profession,
-      email: data.email,
-      phone: data.phone,
+        marriageDate: data.marriageDate
+          ? new Date(data.marriageDate)
+          : null,
+        marriagePlace: data.marriagePlace,
 
-      parentId: data.parentId,
-    },
+        spouseFather: data.spouseFather,
+        spouseMother: data.spouseMother,
+        spouseMaidenName: data.spouseMaidenName,
+
+        profession: data.profession,
+        email: data.email,
+        phone: data.phone,
+
+        parentId: data.parentId,
+
+        // ✅ update spouse relation
+        spouse: newSpouseId
+          ? { connect: { id: newSpouseId } }
+          : { disconnect: true },
+      },
+    });
+
+    // 🔥 2. REMOVE old spouse link (if changed)
+    if (oldSpouseId && oldSpouseId !== newSpouseId) {
+      await tx.familyMember.update({
+        where: { id: oldSpouseId },
+        data: {
+          spouse: { disconnect: true },
+        },
+      });
+    }
+
+    // 🔥 3. SET reverse link for new spouse
+    if (newSpouseId && oldSpouseId !== newSpouseId) {
+      await tx.familyMember.update({
+        where: { id: newSpouseId },
+        data: {
+          spouse: {
+            connect: { id: data.id },
+          },
+        },
+      });
+    }
+
+    return updated;
   });
-
-  return updated;
 }
 
 export async function deleteFamilyMember(id: string, deleteChildren: boolean) {
