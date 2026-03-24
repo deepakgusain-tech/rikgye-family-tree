@@ -106,6 +106,8 @@ const MemberFormModal = ({
     const uploadedUrls: string[] = [];
 
     for (const img of values.image) {
+      if (!(img instanceof File)) continue;
+
       const formData = new FormData();
       formData.append("file", img);
       formData.append("key", "file");
@@ -119,7 +121,7 @@ const MemberFormModal = ({
       uploadedUrls.push(data.url);
     }
 
-    values.image = uploadedUrls;
+    values.image = uploadedUrls.length > 0 ? uploadedUrls : values.image;
 
     let parentId: any = values.parentId ?? null;
     let spouseId: string | null = null;

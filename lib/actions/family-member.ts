@@ -42,8 +42,8 @@ export async function createFamilyMember(data: Omit<any, "id">) {
   return await prisma.$transaction(async (tx) => {
     const existingMember = parentId
       ? await tx.familyMember.findUnique({
-          where: { id: parentId },
-        })
+        where: { id: parentId },
+      })
       : null;
 
     let parentToAssign: string | null = null;
@@ -169,7 +169,7 @@ export async function getSpouses(spouseId: string) {
     where: {
       spouseId: spouseId
     }
-  });   
+  });
 
   const formattedMembers = members.map((m) => ({
     id: m.id,
@@ -199,10 +199,8 @@ export async function getSpouses(spouseId: string) {
   return formattedMembers;
 }
 
-
 export async function updateFamilyMember(data: any) {
   return await prisma.$transaction(async (tx) => {
-    // 🔍 get existing member
     const existing = await tx.familyMember.findUnique({
       where: { id: data.id },
       select: { spouseId: true },
@@ -211,7 +209,6 @@ export async function updateFamilyMember(data: any) {
     const oldSpouseId = existing?.spouseId ?? null;
     const newSpouseId = data.spouseId ?? null;
 
-    // ✅ 1. update main member
     const updated = await tx.familyMember.update({
       where: { id: data.id },
       data: {
@@ -242,16 +239,17 @@ export async function updateFamilyMember(data: any) {
         email: data.email,
         phone: data.phone,
 
-        parentId: data.parentId,
+        parent: data.parentId
+          ? { connect: { id: data.parentId } }
+          : { disconnect: true },
 
-        // ✅ update spouse relation
         spouse: newSpouseId
           ? { connect: { id: newSpouseId } }
           : { disconnect: true },
       },
     });
 
-    // 🔥 2. REMOVE old spouse link (if changed)
+    // 🔥 remove old spouse link
     if (oldSpouseId && oldSpouseId !== newSpouseId) {
       await tx.familyMember.update({
         where: { id: oldSpouseId },
@@ -261,7 +259,7 @@ export async function updateFamilyMember(data: any) {
       });
     }
 
-    // 🔥 3. SET reverse link for new spouse
+    // 🔥 set reverse spouse link
     if (newSpouseId && oldSpouseId !== newSpouseId) {
       await tx.familyMember.update({
         where: { id: newSpouseId },
