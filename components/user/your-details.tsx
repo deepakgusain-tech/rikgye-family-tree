@@ -117,7 +117,7 @@ export default function YourDetailsForm({ user }: YourDetailsFormProps) {
                 {user?.avatar && (
                   <div className="mt-4">
                     <img
-                      src={user.avatar}
+                      src={"/api/" + user.avatar}
                       alt=""
                       height={100}
                       width={100}
