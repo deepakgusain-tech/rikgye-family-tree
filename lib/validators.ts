@@ -94,6 +94,7 @@ export const familyMemberSchema = z.object({
   email: z.string().min(1, "Invalid email").optional(),
   phone: z.string().optional(),
   parentId: z.string().nullable().optional(),
+  spouseId: z.string().nullable().optional(),
   userId: z.string().nullable().optional(),
   relation: z.string().optional(),
 });
