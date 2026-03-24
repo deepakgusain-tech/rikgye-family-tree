@@ -11,14 +11,11 @@ import { DeleteMemberDialog } from "./delete-member-modal";
 
 import { deleteFamilyMember, getSpouses } from "@/lib/actions/family-member";
 import { getCurrentUser } from "@/lib/actions/user-action";
-
-/* ---------------- CONFIG ---------------- */
+import { ChildDeleteMemberModal } from "./child-delete-member-modal";
 
 const CARD_W = 150;
-const CARD_H = 180;
-const CONNECTOR_OFFSET = 6;
-
-/* ---------------- TREE BUILDER ---------------- */
+const CARD_H = 140;
+const CONNECTOR_OFFSET = 1;
 
 function buildTree(members: any[]): RawNodeDatum[] {
   const map = new Map<string, RawNodeDatum>();
@@ -92,6 +89,7 @@ const NodeCard = ({
   const isAdmin = currentUserRole === "ADMIN";
   const isOwner = member.userId === currentUserId;
   const canEdit = isAdmin || isOwner;
+  const canDelete = isAdmin || isOwner;
   const isMale = member.gender === "MALE";
 
   const SPOUSE_GAP = 10; // spacing between cards
@@ -123,6 +121,7 @@ const NodeCard = ({
           width={CARD_W + 80}
           height={CARD_H}
           style={{ overflow: "visible" }}
+
         >
           <div className="relative group flex items-center h-full isolate">
             {/* ACTION PANEL */}
@@ -156,15 +155,18 @@ const NodeCard = ({
                 </button>
               )}
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(member);
-                }}
-                className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition"
-              >
-                <Trash2 size={14} />
-              </button>
+              {canDelete && (
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(member);
+                  }}
+                  className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
 
             {/* CARD */}
@@ -222,15 +224,16 @@ const NodeCard = ({
             </div>
           </div>
         </foreignObject>
-      </g>
-      {spouses.map((spouse: any, index: number) => {
-        const x = -((index + 1) * (CARD_W + SPOUSE_GAP)) - 75; // ✅ LEFT ONLY
 
-        const isFemale = spouse.gender === "FEMALE";
+        {spouses.map((spouse: any, index: number) => {
+          const x = -((index + 1) * (CARD_W + SPOUSE_GAP)) - 75; // ✅ LEFT ONLY
 
-        return (
-          <g key={index}>
+          const isFemale = spouse.gender === "FEMALE";
+
+          return (
+
             <foreignObject
+              key={index}
               x={x}
               y={-CARD_H / 2}
               width={CARD_W}   // ✅ IMPORTANT FIX
@@ -271,9 +274,11 @@ const NodeCard = ({
                 </div>
               </div>
             </foreignObject>
-          </g>
-        );
-      })}
+
+          );
+        })}
+      </g>
+
 
     </>
 
@@ -349,8 +354,8 @@ const TreeLayout = ({
         translate={translate}
         pathFunc={centeredStepPath}
         pathClassFunc={getLinkClass}
-        nodeSize={{ x: 280, y: 240 }}
-        separation={{ siblings: 1.3, nonSiblings: 1.7 }}
+        nodeSize={{ x: 150 * (members.length), y: 240 }}
+        separation={{ siblings: 2, nonSiblings: 1.7 }}
         depthFactor={240}
         renderCustomNodeElement={renderNode}
         zoomable
@@ -363,147 +368,132 @@ const TreeLayout = ({
 };
 
 /* ---------------- MAIN ---------------- */
+export const FamilyTreeContent: React.FC = () => {
+  const { activeFamily, addMember, editMember, deleteMember } =
+    useFamilyContext();
 
-export const FamilyTreeContent = () => {
-  const [mounted, setMounted] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const members = activeFamily?.members ?? [];
+
+  const [loading, setLoading] = useState(true);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
-  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-
-  const { activeFamily, addMember, editMember, deleteMember } = useFamilyContext();
-  const members = activeFamily?.members ?? [];
-
+  const [viewMember, setViewMember] = useState<FamilyMember | null>(null);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [defaultParentId, setDefaultParentId] = useState<string | null>(null);
 
   const [deletingMember, setDeletingMember] = useState<FamilyMember | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCannotDeleteDialog, setShowCannotDeleteDialog] = useState(false);
+
+  /* ---------------- INIT USER ---------------- */
 
   useEffect(() => {
-    const loadUser = async () => {
+    const init = async () => {
       const user = await getCurrentUser();
       setCurrentUserId(user?.data?.id ?? null);
       setCurrentUserRole(user?.data?.role ?? null);
+      setLoading(false);
     };
-    loadUser();
-    setMounted(true);
+
+    init();
   }, []);
 
-  const triggerRefresh = () => setRefreshKey((prev) => prev + 1);
+  /* ---------------- HANDLERS ---------------- */
 
-  const handleSubmit = (member: any) => {
+  const handleAdd = (parent?: FamilyMember) => {
+    setEditingMember(null);
+    setDefaultParentId(parent?.id ?? null);
+    setShowMemberForm(true);
+  };
+
+  const handleEdit = (member: FamilyMember) => {
+    setEditingMember(member);
+    setShowMemberForm(true);
+  };
+
+  const handleDelete = (member: FamilyMember) => {
+    const hasChildren = members.some((m) => m.parentId === member.id)
+
+    setDeletingMember(member)
+
+    if (hasChildren) {
+      setShowCannotDeleteDialog(true);
+      return;
+    }
+
+    setShowDeleteDialog(true);
+    setDeletingMember(member);
+  };
+
+  const handleMemberSubmit = (member: any) => {
     if (!activeFamily) return;
-    editingMember ? editMember(activeFamily.id, member) : addMember(activeFamily.id, member);
-    triggerRefresh();
+
+    if (editingMember) editMember(activeFamily.id, member);
+    else addMember(activeFamily.id, member);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (deleteChildren: boolean) => {
     if (!activeFamily || !deletingMember) return;
-    await deleteFamilyMember(deletingMember.id, false);
-    deleteMember(activeFamily.id, deletingMember.id, false);
+
+    await deleteFamilyMember(deletingMember.id, deleteChildren);
+    deleteMember(activeFamily.id, deletingMember.id, deleteChildren);
+
     setShowDeleteDialog(false);
-    triggerRefresh();
+    setDeletingMember(null);
   };
 
-  if (!mounted) return null;
+  /* ---------------- LOADING UI ---------------- */
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] gap-3">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+        <p className="text-sm text-gray-500">Loading family tree...</p>
+      </div>
+    );
+  }
+
+  /* ---------------- EMPTY STATE ---------------- */
+
+  if (activeFamily && members.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-6">
+        <p className="text-lg font-medium">No family members yet</p>
+
+        <button
+          onClick={() => handleAdd()}
+          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white"
+        >
+          <Plus size={16} />
+          Add First Member
+        </button>
+      </div>
+    );
+  }
+
+  /* ---------------- TREE ---------------- */
 
   return (
     <div className="flex-1 flex flex-col">
-
-      <TreeLayout
-        members={members}
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        onAdd={(p: any) => { setEditingMember(null); setDefaultParentId(p?.id || null); setShowMemberForm(true); }}
-        onEdit={(m: any) => { setEditingMember(m); setShowMemberForm(true); }}
-        onDelete={(m: any) => { setDeletingMember(m); setShowDeleteDialog(true); }}
-        onView={(m: any) => { setSelectedMember(m); setShowDetails(true); }}
-        refreshKey={refreshKey}
-      />
-
-      {/* DETAILS MODAL */}
-      {showDetails && selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
-          <div className="relative w-[420px] bg-white rounded-3xl shadow-2xl overflow-hidden">
-
-            {/* HEADER */}
-            <div
-              className={`h-28 ${selectedMember.gender === "MALE"
-                ? "bg-gradient-to-r from-blue-500 to-indigo-500"
-                : "bg-gradient-to-r from-pink-500 to-rose-500"
-                }`}
-            >
-              <button
-                onClick={() => setShowDetails(false)}
-                className="absolute top-3 right-3 text-white text-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* PROFILE IMAGE */}
-            <div className="flex justify-center -mt-14">
-              <img
-                src={selectedMember.image[0] || ""}
-                className={`w-28 h-28 rounded-full object-cover border-[4px] ${selectedMember.gender === "MALE" ? "border-blue-400" : "border-pink-400"
-                  } bg-white`}
-              />
-            </div>
-
-            {/* NAME + RELATION */}
-            <div className="text-center mt-3">
-              <h2 className="text-xl font-semibold">{selectedMember.name}</h2>
-              <p className="text-xs text-gray-500">
-                {selectedMember.relation || "Family Member"}
-              </p>
-            </div>
-
-            {/* DETAILS */}
-            <div className="grid grid-cols-2 gap-3 p-6 text-sm">
-
-              <div>Gender: {selectedMember.gender}</div>
-              <div>Status: {selectedMember.isAlive ? "Alive" : "Dead"}</div>
-
-              <div>Birth Date: {selectedMember.birthDate ? new Date(selectedMember.birthDate).toLocaleDateString() : "—"}</div>
-              <div>Birth Place: {selectedMember.birthPlace || "—"}</div>
-
-              {!selectedMember.isAlive && (
-                <>
-                  <div>Death Date: {selectedMember.deathDate ? new Date(selectedMember.deathDate).toLocaleDateString() : "—"}</div>
-                  <div>Cause of Death: {selectedMember.causeOfDeath || "—"}</div>
-                </>
-              )}
-
-              <div>Current Residence: {selectedMember.currentResidence || "—"}</div>
-              <div>Profession: {selectedMember.profession || "—"}</div>
-
-              <div>Marriage Date: {selectedMember.marriageDate ? new Date(selectedMember.marriageDate).toLocaleDateString() : "—"}</div>
-              <div>Marriage Place: {selectedMember.marriagePlace || "—"}</div>
-
-
-
-
-              <div>Email: {selectedMember.email || "—"}</div>
-              <div>Phone: {selectedMember.phone || "—"}</div>
-
-              <div className="col-span-2 text-xs break-all">ID: {selectedMember.id}</div>
-              {selectedMember.parentId && (
-                <div className="col-span-2 text-xs break-all">Parent ID: {selectedMember.parentId}</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="flex-1 overflow-auto px-6">
+        <TreeLayout
+          members={members}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onView={setViewMember}
+        />
+      </div>
 
       <MemberFormModal
         open={showMemberForm}
         onClose={() => setShowMemberForm(false)}
-        onSubmit={handleSubmit}
+        onSubmit={handleMemberSubmit}
         existingMembers={members}
         editingMember={editingMember}
         defaultParentId={defaultParentId}
@@ -513,9 +503,23 @@ export const FamilyTreeContent = () => {
         open={showDeleteDialog}
         member={deletingMember}
         hasChildren={false}
-        onClose={() => setShowDeleteDialog(false)}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setDeletingMember(null);
+        }}
         onConfirm={handleDeleteConfirm}
       />
+
+      {
+        showCannotDeleteDialog && <ChildDeleteMemberModal open={showCannotDeleteDialog}
+          member={deletingMember}
+          hasChildren={false}
+          onClose={() => {
+            setShowDeleteDialog(false);
+            setDeletingMember(null);
+          }}
+          onConfirm={handleDeleteConfirm} />
+      }
     </div>
   );
 };
