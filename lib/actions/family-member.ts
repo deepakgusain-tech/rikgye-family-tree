@@ -33,9 +33,6 @@ export interface FamilyMemberTree {
 export async function createFamilyMember(data: Omit<any, "id">) {
   const currentUser = await getCurrentUser();
 
-  console.log(data);
-  
-
   if (!currentUser?.data?.id) {
     throw new Error("User not authenticated");
   }
@@ -98,16 +95,6 @@ export async function createFamilyMember(data: Omit<any, "id">) {
           },
         },
       });
-
-      // update spouse (reverse link)
-      await tx.familyMember.update({
-        where: { id: data.spouseId },
-        data: {
-          spouse: {
-            connect: { id: member.id },
-          },
-        },
-      });
     }
 
     // ✅ Relink child → new father
@@ -129,6 +116,59 @@ export async function createFamilyMember(data: Omit<any, "id">) {
 export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
   const members = await prisma.familyMember.findMany({
     orderBy: { birthDate: "asc" },
+    where: {
+      spouseId: null
+    }
+  });
+
+  const formattedMembers = members.map((m) => ({
+    id: m.id,
+    name: m.name,
+    image: m.image || "",
+    gender: (m.gender as "MALE" | "FEMALE" | "OTHER") ?? "OTHER",
+    birthDate: m.birthDate?.toISOString().split("T")[0] || undefined,
+    birthPlace: m.birthPlace || undefined,
+    isAlive: m.isAlive ?? true,
+    currentResidence: m.currentResidence || undefined,
+    deathDate: m.deathDate?.toISOString().split("T")[0] || undefined,
+    deathPlace: m.deathPlace || undefined,
+    causeOfDeath: m.causeOfDeath || undefined,
+    marriageDate: m.marriageDate?.toISOString().split("T")[0] || undefined,
+    marriagePlace: m.marriagePlace || undefined,
+    spouseMaidenName: m.spouseMaidenName || undefined,
+    spouseFather: m.spouseFather || undefined,
+    spouseMother: m.spouseMother || undefined,
+    profession: m.profession || undefined,
+    email: m.email || undefined,
+    phone: m.phone || undefined,
+    parentId: m.parentId || null,
+    userId: m.userId,
+    children: [] as FamilyMemberTree[],
+  }));
+
+  const map = new Map<string, FamilyMemberTree>();
+  const roots: any = [];
+
+  formattedMembers.forEach((m: any) => map.set(m.id, m));
+
+  formattedMembers.forEach((m) => {
+    if (m.parentId) {
+      const parent: any = map.get(m.parentId);
+      if (parent) parent.children.push(m);
+    } else {
+      roots.push(m);
+    }
+  });
+
+  return roots;
+}
+
+export async function getSpouses(spouseId: string): Promise<FamilyMemberTree[]> {
+  const members = await prisma.familyMember.findMany({
+    orderBy: { birthDate: "asc" },
+    where: {
+      spouseId: spouseId
+    }
   });
 
   const formattedMembers = members.map((m) => ({

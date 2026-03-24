@@ -172,7 +172,7 @@ const NodeCard = ({
               <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-40">
                 {member.image ? (
                   <img
-                    src={member.image}
+                    src={member.image[0] ?? ''}
                     className={`w-20 h-20 rounded-full object-cover
                       border-[3px]
                       ${isMale ? "border-blue-400" : "border-pink-400"}

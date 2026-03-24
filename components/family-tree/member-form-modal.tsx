@@ -101,7 +101,27 @@ const MemberFormModal = ({
 
   // ================= SUBMIT =================
   const handleFormSubmit: SubmitHandler<FormData> = async (values) => {
-    const imageUrl = typeof values.image === "string" ? values.image : "";
+    const imageUrl = values.image || [];
+
+    // ✅ upload images separately
+    const uploadedUrls: string[] = [];
+
+    for (const img of values.image) {
+      const formData = new FormData();
+      formData.append("file", img);
+      formData.append("key", "file");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      
+      uploadedUrls.push(data.url);
+    }
+
+    values.image = uploadedUrls;    
 
     let parentId: any = values.parentId ?? null;
     let spouseId: string | null = null;
@@ -128,16 +148,17 @@ const MemberFormModal = ({
 
     // ===== CREATE / UPDATE =====
     if (!editingMember) {
-
       const newMember: any = await createFamilyMember({
         ...values,
         relation,
         spouseId,
         parentId: values.parentId,
-        image: imageUrl,
+        image: values.image ?? [],
         gender: values.gender ?? Gender.OTHER,
         userId: values.userId ?? null,
       });
+
+      form.reset();
 
       onSubmit(newMember);
     } else {
@@ -156,6 +177,22 @@ const MemberFormModal = ({
     }
 
     onClose();
+  };
+
+  const toBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.readAsDataURL(file);
+
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+
+      reader.onerror = (error) => {
+        reject(error);
+      };
+    });
   };
 
   const isAlive = form.watch("isAlive");
@@ -329,41 +366,62 @@ const MemberFormModal = ({
                     name="image"
                     render={({ field }) => (
                       <FormItem className="flex flex-col gap-4">
+
+                        {/* Upload Box */}
                         <label className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 transition">
                           <UploadCloud className="mb-2 text-gray-500" />
                           <p className="text-sm text-gray-600">Click or drag images here</p>
                           <span className="text-xs text-gray-400">Multiple files supported</span>
+
                           <input
                             type="file"
                             multiple
                             className="hidden"
                             onChange={(e) => {
                               if (!e.target.files) return;
-                              const filesArray = Array.from(e.target.files);
-                              const urls = filesArray.map((file) => URL.createObjectURL(file));
-                              field.onChange([...(field.value || []), ...urls]);
+
+                              const files = Array.from(e.target.files);
+
+                              const current = field.value || [];
+
+                              field.onChange([...current, ...files]); // ✅ store File only
                             }}
                           />
                         </label>
 
-                        {/* Show previews */}
-                        {field.value && field?.value?.length > 0 && (
+                        {/* Preview */}
+                        {field.value?.length > 0 && (
                           <div className="flex flex-wrap gap-2">
-                            {field.value.map((img: string, index: number) => (
-                              <div key={index} className="relative w-20 h-20 rounded overflow-hidden border">
-                                <img src={img} alt={`preview-${index}`} className="w-full h-full object-cover" />
-                                <button
-                                  type="button"
-                                  className="absolute top-1 right-1 bg-white rounded-full p-1 shadow"
-                                  onClick={() => {
-                                    const updated = field.value.filter((_i, i) => i !== index);
-                                    field.onChange(updated);
-                                  }}
+                            {field.value.map((img: File | string, index: number) => {
+                              const src =
+                                img instanceof File
+                                  ? URL.createObjectURL(img)
+                                  : img;
+
+                              return (
+                                <div
+                                  key={index}
+                                  className="relative w-20 h-20 rounded overflow-hidden border"
                                 >
-                                  <X className="w-3 h-3 text-red-500" />
-                                </button>
-                              </div>
-                            ))}
+                                  <img
+                                    src={src}
+                                    alt={`preview-${index}`}
+                                    className="w-full h-full object-cover"
+                                  />
+
+                                  <button
+                                    type="button"
+                                    className="absolute top-1 right-1 bg-white rounded-full p-1 shadow"
+                                    onClick={() => {
+                                      const updated = field.value.filter((_, i) => i !== index);
+                                      field.onChange(updated);
+                                    }}
+                                  >
+                                    <X className="w-3 h-3 text-red-500" />
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </FormItem>

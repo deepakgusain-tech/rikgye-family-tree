@@ -31,7 +31,7 @@ export const updateUserSchema = z.object({
     z.string()
   ]).optional(),
   password: z.string().min(1, "User password is required"),
-   role: z.enum(Object.values(Role)),
+  role: z.enum(Object.values(Role)),
   createdAt: z.date().nullable().optional(),
   updatedAt: z.date().nullable().optional(),
 });
@@ -73,7 +73,10 @@ export const passwordSchema = z
 
 export const familyMemberSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  image: z.array(z.string().min(1, "Image is required")),
+  image: z.array(z.union([
+    z.instanceof(File),
+    z.string().min(1)
+  ])),
   gender: z.enum(Object.values(Gender)),
   birthDate: z.string().min(1, "Date of Birth is required"),
   birthPlace: z.string().min(1, "Place of Birth is requird"),
@@ -92,5 +95,5 @@ export const familyMemberSchema = z.object({
   phone: z.string().optional(),
   parentId: z.string().nullable().optional(),
   userId: z.string().nullable().optional(),
-   relation: z.string().optional(),
+  relation: z.string().optional(),
 });
