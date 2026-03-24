@@ -34,7 +34,7 @@ const UserMenu = () => {
         <div className="w-9 h-9 rounded-full border-2 border-emerald-500 overflow-hidden cursor-pointer hover:scale-105 transition shrink-0">
           <Image
             src={user?.image
-              ? `/api${user.image}?t=${Date.now()}`
+              ? `/api/${user.image}?t=${Date.now()}`
               : defaultImage
             }
             unoptimized
