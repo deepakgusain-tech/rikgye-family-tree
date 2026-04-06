@@ -226,7 +226,7 @@ const NodeCard = ({
         </foreignObject>
 
         {spouses.map((spouse: any, index: number) => {
-          const x = -((index + 1) * (CARD_W + SPOUSE_GAP)) - 75; 
+          const x = -((index + 1) * (CARD_W + SPOUSE_GAP)) - 75;
 
           const isFemale = spouse.gender === "FEMALE";
 
@@ -324,21 +324,21 @@ const TreeLayout = ({
     setTranslate({ x: width / 2, y: 120 });
   }, [members, refreshKey]);
 
-  if (members.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-6">
-        <p className="text-lg font-medium">No family members yet</p>
+  // if (members.length === 0) {
+  //   return (
+  //     <div className="flex flex-col items-center justify-center py-24 gap-6">
+  //       <p className="text-lg font-medium">No family members yet</p>
 
-        <button
-          onClick={() => onAdd()}
-          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white"
-        >
-          <Plus size={16} />
-          Add First Member
-        </button>
-      </div>
-    );
-  }
+  //       <button
+  //         onClick={() => onAdd()}
+  //         className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white"
+  //       >
+  //         <Plus size={16} />
+  //         Add First Member
+  //       </button>
+  //     </div>
+  //   );
+  // }
 
   const data: RawNodeDatum =
     treeData.length === 1
@@ -460,17 +460,29 @@ export const FamilyTreeContent: React.FC = () => {
 
   if (activeFamily && members.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-6">
-        <p className="text-lg font-medium">No family members yet</p>
+      <>
+        <div className="flex flex-col items-center justify-center py-24 gap-6">
+          <p className="text-lg font-medium">No family members yet</p>
 
-        <button
-          onClick={() => handleAdd()}
-          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white"
-        >
-          <Plus size={16} />
-          Add First Member
-        </button>
-      </div>
+          <button
+            onClick={() => handleAdd()}
+            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white"
+          >
+            <Plus size={16} />
+            Add First Member
+          </button>
+        </div>
+
+        {/* ✅ KEEP MODAL HERE */}
+        <MemberFormModal
+          open={showMemberForm}
+          onClose={() => setShowMemberForm(false)}
+          onSubmit={handleMemberSubmit}
+          existingMembers={members}
+          editingMember={editingMember}
+          defaultParentId={defaultParentId}
+        />
+      </>
     );
   }
 
