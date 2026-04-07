@@ -1,23 +1,33 @@
 "use client";
-
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Download, Upload, TreePine, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TreeVisualization from '@/components/new-design/TreeVisualization';
-import { AddPersonModal, EditPersonModal } from '@/components/new-design/FamilyModals';
-import { toast } from 'sonner';
+import TreeVisualization from './TreeVisualization';
+import { AddPersonModal, EditPersonModal, AddParentModal } from './FamilyModals';
 import { useFamilyTree } from '@/hooks/useFamilyTree';
-import { Spouse } from '@/types';
+import { toast } from 'sonner';
+import { Spouse, Gender, FamilyMember } from '@/types';
+import MemberFormModal from '../family-tree/member-form-modal';
+import { getFamilyMemberByID, createFamilyMember, updateFamilyMember } from '@/lib/actions/family-member';
+import { useRouter } from 'next/navigation';
 
-const FamilyTreeApp: React.FC = () => {
-  const { root, findNode, addChild, addSpouse, updatePerson, updateSpouseType, deletePerson, exportData, importData } = useFamilyTree();
+const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members }: any) => {
+  const { root, findNode, createMember, addChild, addSpouse, addParent, updatePerson, updateSpouseType, deletePerson, exportData, importData } = useFamilyTree(data);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'person' | 'spouse'>('person');
   const [addModal, setAddModal] = useState(false);
+  const [addParentModal, setAddParentModal] = useState(false);
+  const [addParentChildId, setAddParentChildId] = useState<string | null>(null);
+  const [addChildModal, setAddChildModal] = useState(false);
+  const [addChildParentId, setAddChildParentId] = useState<string | null>(null);
+  const [addSpouseModal, setAddSpouseModal] = useState(false);
+  const [addSpouseNodeId, setAddSpouseNodeId] = useState<string | null>(null);
   const [editModal, setEditModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedData, setSelectedData] = useState<any>(null);
 
+  const router = useRouter()
 
   const handleNodeClick = useCallback((id: string, type: 'person' | 'spouse') => {
     if (selectedId === id) {
@@ -29,66 +39,85 @@ const FamilyTreeApp: React.FC = () => {
     // setEditModal(true);
   }, [selectedId]);
 
-  const getSelectedData = () => {
-    if (!selectedId) return null;
-    // Check main nodes
-    const node = findNode(selectedId);
-    if (node) return { name: node.name, gender: node.gender, birthYear: node.birthYear, isSpouse: false };
-    // Check spouses
-    const findSpouse = (n: typeof root): { spouse: Spouse; parentId: string } | null => {
+  // Fetch selected data when selectedId changes
+  useEffect(() => {
+    const fetchSelectedData = async () => {
+      if (!selectedId) {
+        setSelectedData(null);
+        return;
+      }
+
+      try {
+        let member = await getFamilyMemberByID(selectedId);
+
+        if (!member) {
+          setSelectedData(null);
+          return;
+        }
+
+        const node = findNode(selectedId);
+        if (node) {
+          setSelectedData({ ...member, isSpouse: false });
+          return;
+        }
+
+        // Check spouses
+        const findSpouse = (n: typeof root): { spouse: Spouse; parentId: string } | null => {
+          if (!n) return null;
+          for (const s of n.spouses) {
+            if (s.id === selectedId) return { spouse: s, parentId: n.id };
+          }
+          for (const c of n.children) {
+            const found = findSpouse(c);
+            if (found) return found;
+          }
+          return null;
+        };
+
+        const spouseResult = root ? findSpouse(root) : null;
+        if (spouseResult) {
+          setSelectedData({
+            ...member,
+            isSpouse: true,
+            spouseType: spouseResult.spouse.type,
+            parentId: spouseResult.parentId,
+          });
+        } else {
+          setSelectedData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching selected data:', error);
+        setSelectedData(null);
+      }
+    };
+
+    fetchSelectedData();
+  }, [selectedId]);
+
+  // Find a parent node to add to (default to selected or root)
+  const addParentId = selectedId && findNode(selectedId) ? selectedId : root?.parentId || '';
+  const addParentName = findNode(addParentId)?.name || root?.name || '';
+
+  const getNodeGender = (nodeId: string) => {
+    // Check if it's a person node
+    const personNode = findNode(nodeId);
+    if (personNode) return personNode.gender;
+
+    // Check if it's a spouse node
+    const findSpouseGender = (n: typeof root): Gender | null => {
+      if (!n) return null;
       for (const s of n.spouses) {
-        if (s.id === selectedId) return { spouse: s, parentId: n.id };
+        if (s.id === nodeId) return s.gender;
       }
       for (const c of n.children) {
-        const found = findSpouse(c);
+        const found = findSpouseGender(c);
         if (found) return found;
       }
       return null;
     };
-    const spouseResult = findSpouse(root);
-    if (spouseResult) {
-      return {
-        name: spouseResult.spouse.name,
-        gender: spouseResult.spouse.gender,
-        birthYear: spouseResult.spouse.birthYear,
-        isSpouse: true,
-        spouseType: spouseResult.spouse.type,
-        parentId: spouseResult.parentId,
-      };
-    }
-    return null;
+
+    return root ? findSpouseGender(root) : null;
   };
-
-  const handleExport = () => {
-    const json = exportData();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'family-tree.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Family tree exported!');
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = importData(ev.target?.result as string);
-      if (result) toast.success('Family tree imported!');
-      else toast.error('Invalid file format');
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  // Find a parent node to add to (default to selected or root)
-  const addParentId = selectedId && findNode(selectedId) ? selectedId : root.id;
-  const addParentName = findNode(addParentId)?.name || root.name;
-
-  const selectedData = selectedId ? getSelectedData() : null;
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -99,103 +128,171 @@ const FamilyTreeApp: React.FC = () => {
         transition={{ duration: 0.5 }}
         className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/80 backdrop-blur-sm z-10"
       >
-        <div className="flex items-center gap-3">
-          <TreePine className="w-6 h-6 text-primary" />
-          <h1 className="font-heading text-xl font-bold text-foreground">Family Tree</h1>
-        </div>
         <div className="flex items-center gap-2">
           {selectedId && (
             <Button variant="outline" size="sm" onClick={() => setSelectedId(null)} className="gap-1">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setAddModal(true)} className="gap-1">
-            <Plus className="w-4 h-4" /> Add Member
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} className="gap-1">
-            <Download className="w-4 h-4" /> Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1">
-            <Upload className="w-4 h-4" /> Import
-          </Button>
-          <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+
         </div>
       </motion.header>
 
-      {/* Legend */}
-      <div className="flex items-center gap-6 px-6 py-2 text-xs text-muted-foreground border-b border-border bg-card/50">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm" style={{ background: 'hsl(210, 60%, 50%)' }} /> Male
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm" style={{ background: 'hsl(330, 60%, 55%)' }} /> Female
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-8 h-0.5" style={{ background: 'hsl(38, 75%, 55%)' }} /> Current
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-8 h-0.5 border-t-2 border-dashed" style={{ borderColor: 'hsl(0, 50%, 50%)' }} /> Ex
-        </span>
-        <span className="text-muted-foreground/60 ml-auto">Scroll to zoom • Drag to pan • Click node to highlight path</span>
-      </div>
-
       {/* Tree */}
-      <div className="flex-1">
-        <TreeVisualization
-          data={root}
-          onNodeClick={handleNodeClick}
-          onEdit={(id : any, type : any) => {
-            setSelectedId(id);
-            setSelectedType(type);
-            setEditModal(true);
-          }}
-          onDelete={deletePerson}
-          selectedId={selectedId}
-        />
+      <div className="flex-1 flex items-center justify-center">
+        {root ? (
+          <TreeVisualization
+            data={root}
+            onNodeClick={handleNodeClick}
+            onEdit={(id, type) => {
+              setSelectedId(id);
+              setSelectedType(type);
+              setEditModal(true);
+            }}
+            onDelete={deletePerson}
+            onAddParent={(childId) => {
+              setAddParentChildId(childId);
+              setAddParentModal(true);
+            }}
+            onAddChild={(parentId) => {
+              setAddChildParentId(parentId);
+              setAddChildModal(true);
+            }}
+            onAddSpouse={(nodeId) => {
+              setAddSpouseNodeId(nodeId);
+              setAddSpouseModal(true);
+            }}
+            selectedId={selectedId}
+          />
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col items-center justify-center gap-6 text-center"
+          >
+            <TreePine className="w-16 h-16 text-muted-foreground opacity-50" />
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Your Family Tree is Empty</h2>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Start building your family tree by adding the first member. Click "Add Member" to begin or import existing data.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={() => setAddModal(true)} className="gap-2">
+                <Plus className="w-4 h-4" /> Add First Member
+              </Button>
+            </div>
+          </motion.div>
+        )}
       </div>
 
-      {/* Add Modal */}
-      <AddPersonModal
+      <MemberFormModal
         open={addModal}
         onClose={() => setAddModal(false)}
-        parentName={addParentName}
-        onAdd={({ name, gender, birthYear, mode, spouseType }) => {
-          if (mode === 'child') {
-            addChild(addParentId, name, gender, birthYear);
-          } else if (mode === 'spouse' && spouseType) {
-            addSpouse(addParentId, name, gender, spouseType, birthYear);
+        existingMembers={members}
+        defaultParentId={null}
+        editingMember={null}
+        onSubmit={async (data) => {
+          try {
+            await createFamilyMember(data);
+            toast.success(`${data.name} added to family tree!`);
+            setAddModal(false);
+            router.refresh();
+          } catch (error) {
+            console.error('Error creating member:', error);
+            toast.error('Failed to add member');
           }
-          toast.success(`${name} added to the family tree!`);
         }}
       />
-
-      {/* Edit Modal */}
       {selectedData && (
-        <EditPersonModal
+        <MemberFormModal
           open={editModal}
           onClose={() => { setEditModal(false); setSelectedId(null); }}
-          initialData={{ name: selectedData.name, gender: selectedData.gender, birthYear: selectedData.birthYear }}
-          isSpouse={selectedData.isSpouse}
-          spouseType={selectedData.isSpouse ? selectedData.spouseType : undefined}
-          onSave={(data) => {
-            updatePerson(selectedId!, data);
-            toast.success('Person updated!');
-          }}
-          onDelete={() => {
-            deletePerson(selectedId!);
-            toast.success('Person removed from tree');
-            setSelectedId(null);
-          }}
-          onSpouseTypeChange={(type) => {
-            if (selectedData.isSpouse && selectedData.parentId) {
-              updateSpouseType(selectedData.parentId, selectedId!, type);
+          existingMembers={members}
+          defaultParentId={null}
+          editingMember={selectedData}
+          onSubmit={async (data) => {
+            try {
+              await updateFamilyMember(data);
+              toast.success(`${data.name} updated successfully!`);
+              setEditModal(false);
+              setSelectedId(null);
+              router.refresh();
+            } catch (error) {
+              console.error('Error updating member:', error);
+              toast.error('Failed to update member');
             }
           }}
         />
       )}
+
+      {/* Add Parent Modal */}
+      {addParentModal && (
+        <MemberFormModal
+          open={addParentModal}
+          onClose={() => { setAddParentModal(false); setAddParentChildId(null); }}
+          existingMembers={members}
+          defaultParentId={null}
+          editingMember={null}
+          onSubmit={async (data) => {
+            try {
+              await createFamilyMember(data);
+              toast.success(`${data.name} added as parent!`);
+              setAddParentModal(false);
+              setAddParentChildId(null);
+              router.refresh();
+            } catch (error) {
+              console.error('Error creating parent:', error);
+              toast.error('Failed to add parent');
+            }
+          }}
+        />
+      )}
+
+      {/* Add Child Modal */}
+      {addChildModal && (
+        <MemberFormModal
+          open={addChildModal}
+          onClose={() => { setAddChildModal(false); setAddChildParentId(null);   }}
+          existingMembers={members}
+          defaultParentId={addChildParentId}
+          editingMember={null}
+          onSubmit={async (data) => {
+            try {
+              await createFamilyMember(data);
+              toast.success(`${data.name} added as child!`);
+              setAddChildModal(false);
+              setAddChildParentId(null);
+              router.refresh();
+            } catch (error) {
+              console.error('Error creating child:', error);
+              toast.error('Failed to add child');
+            }
+          }}
+        />
+      )}
+
+
+      {/* Add Spouse Modal */}
+      <AddPersonModal
+        open={addSpouseModal}
+        onClose={() => setAddSpouseModal(false)}
+        parentName={addSpouseNodeId ? findNode(addSpouseNodeId)?.name || 'Unknown' : 'Unknown'}
+        title="Add Spouse"
+        description={`Adding spouse to ${addSpouseNodeId ? findNode(addSpouseNodeId)?.name || 'Unknown' : 'Unknown'}`}
+        initialMode="spouse"
+        parentGender={addSpouseNodeId ? getNodeGender(addSpouseNodeId) ?? undefined : undefined}
+        onAdd={({ name, gender, birthYear, spouseType }) => {
+          if (addSpouseNodeId && spouseType) {
+            addSpouse(addSpouseNodeId, name, gender, spouseType, birthYear);
+            toast.success(`${name} added as spouse!`);
+            setAddSpouseNodeId(null);
+          }
+        }}
+      />
     </div>
   );
 };
-
 
 export default FamilyTreeApp;

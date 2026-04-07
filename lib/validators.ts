@@ -90,7 +90,7 @@ export const familyMemberSchema = z.object({
 
   currentResidence: z.string().optional(),
 
-  deathDate: z.string().optional(),
+  deathDate: z.string().nullable().optional(),
   deathPlace: z.string().optional(),
   causeOfDeath: z.string().optional(),
 

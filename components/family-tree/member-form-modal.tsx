@@ -6,6 +6,7 @@ import { FamilyMember } from "@/types";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -73,32 +74,33 @@ const MemberFormModal = ({
 }: MemberFormModalProps) => {
   const router = useRouter();
 
+  console.log(defaultParentId);
+  
+
   const form = useForm<FormData>({
     resolver: zodResolver(familyMemberSchema) as any,
     defaultValues: editingMember
       ? {
-          ...familyMemberDefaultValues,
-          ...editingMember,
-          image: Array.isArray(editingMember.image)
-            ? editingMember.image
-            : editingMember.image
+        ...familyMemberDefaultValues,
+        ...editingMember,
+        image: Array.isArray(editingMember.image)
+          ? editingMember.image
+          : editingMember.image
             ? [editingMember.image]
             : [],
-          relation: editingMember.relation ?? "",
-          parentId: editingMember.parentId ?? defaultParentId ?? null,
-          birthDate: editingMember.birthDate
-            ? editingMember.birthDate.split("T")[0]
-            : "",
-          marriageDate: editingMember.marriageDate
-            ? editingMember.marriageDate.split("T")[0]
-            : "",
-        }
+        relation: editingMember.relation ?? "",
+        parentId: editingMember.parentId ?? defaultParentId ?? null,
+        birthDate: editingMember.birthDate,
+        marriageDate: editingMember.marriageDate
+          ? editingMember.marriageDate.split("T")[0]
+          : "",
+      }
       : {
-          ...familyMemberDefaultValues,
-          image: [],
-          parentId: defaultParentId ?? null,
-          relation: "",
-        },
+        ...familyMemberDefaultValues,
+        image: [],
+        parentId: defaultParentId ?? null,
+        relation: "",
+      },
   });
 
   useEffect(() => {
@@ -114,8 +116,8 @@ const MemberFormModal = ({
         image: Array.isArray(editingMember.image)
           ? editingMember.image
           : editingMember.image
-          ? [editingMember.image]
-          : [],
+            ? [editingMember.image]
+            : [],
         relation: editingMember.relation ?? "",
         parentId: editingMember.parentId ?? defaultParentId ?? null,
         birthDate: formatDate(editingMember.birthDate),
@@ -132,23 +134,28 @@ const MemberFormModal = ({
   }, [editingMember, defaultParentId]);
 
   const handleFormSubmit: SubmitHandler<FormData> = async (values) => {
+    
     const uploadedUrls: string[] = [];
-    for (const img of values.image) {
-      if (!(img instanceof File)) continue;
-      const formData = new FormData();
-      formData.append("file", img);
-      formData.append("key", "file");
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      uploadedUrls.push(data.url);
+    if (values.image) {
+      for (const img of values.image) {
+        if (!(img instanceof File)) continue;
+        const formData = new FormData();
+        formData.append("file", img);
+        formData.append("key", "file");
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        uploadedUrls.push(data.url);
+      }
     }
 
     // Replace File objects with uploaded URLs
-    values.image = values.image.map((img) => (img instanceof File ? uploadedUrls.shift()! : img));
+    if (values.image) {
+      values.image = values.image.map((img) => (img instanceof File ? uploadedUrls.shift()! : img));
+    }
 
     let parentId: string | null = values.parentId ?? null;
     let spouseId: string | null = null;
-    const relation = values.relation;
+    const relation = values.relation || '';
 
     if (["WIFE", "SPOUSE", "EX_WIFE"].includes(relation)) {
       spouseId = values.parentId ?? null;
@@ -204,11 +211,15 @@ const MemberFormModal = ({
             <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20 transition">
               <X className="h-5 w-5" />
             </button>
+
           </div>
+          <DialogDescription className="text-white">
+            Fill in the details to add a new family member.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <form onSubmit={form.handleSubmit(handleFormSubmit, (error) => console.error(error))} className="flex flex-col flex-1 overflow-hidden">
             <div className="flex-1 overflow-hidden p-5">
               <Tabs defaultValue="general" className="flex flex-col h-full">
                 <div className="sticky top-0 z-40 bg-gradient-to-b from-emerald-50 to-transparent pb-2">
@@ -379,13 +390,13 @@ const MemberFormModal = ({
                             className="hidden"
                             onChange={(e) => {
                               if (!e.target.files) return;
-                              field.onChange([...field.value, ...Array.from(e.target.files)]);
+                              field.onChange([...(field.value || []), ...Array.from(e.target.files)]);
                             }}
                           />
                         </label>
-                        {field.value?.length > 0 && (
+                        {(field.value?.length ?? 0) > 0 && (
                           <div className="flex flex-wrap gap-3">
-                            {field.value.map((img: File | string, idx) => {
+                            {field.value?.map((img: File | string, idx) => {
                               const src = img instanceof File ? URL.createObjectURL(img) : img;
                               return (
                                 <div key={idx} className="relative w-24 h-24 rounded-xl overflow-hidden shadow-md">
@@ -393,7 +404,7 @@ const MemberFormModal = ({
                                   <button
                                     type="button"
                                     className="absolute top-1 right-1 bg-white rounded-full p-1"
-                                    onClick={() => field.onChange(field.value.filter((_, i) => i !== idx))}
+                                    onClick={() => field.onChange((field.value || []).filter((_, i) => i !== idx))}
                                   >
                                     <X className="w-3 h-3 text-red-500" />
                                   </button>
@@ -439,35 +450,35 @@ const MemberFormModal = ({
                         <FormLabel>Marriage Place</FormLabel>
                         <Input {...field} className="rounded-lg shadow-sm" />
                       </FormItem>
-                    )}/>
+                    )} />
 
                     <FormField control={form.control} name="marriageDate" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Marriage Date</FormLabel>
                         <Input type="date" {...field} className="rounded-lg shadow-sm" />
                       </FormItem>
-                    )}/>
+                    )} />
 
                     <FormField control={form.control} name="spouseMaidenName" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Spouse Maiden Name</FormLabel>
                         <Input {...field} className="rounded-lg shadow-sm" />
                       </FormItem>
-                    )}/>
+                    )} />
 
                     <FormField control={form.control} name="spouseFather" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Spouse Father</FormLabel>
                         <Input {...field} className="rounded-lg shadow-sm" />
                       </FormItem>
-                    )}/>
+                    )} />
 
                     <FormField control={form.control} name="spouseMother" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Spouse Mother</FormLabel>
                         <Input {...field} className="rounded-lg shadow-sm" />
                       </FormItem>
-                    )}/>
+                    )} />
                   </div>
                 </TabsContent>
 
@@ -479,7 +490,7 @@ const MemberFormModal = ({
                         <FormLabel>Is Alive</FormLabel>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
                       </FormItem>
-                    )}/>
+                    )} />
                     {!isAlive && (
                       <>
                         <FormField control={form.control} name="causeOfDeath" render={({ field }) => (
@@ -487,13 +498,13 @@ const MemberFormModal = ({
                             <FormLabel>Cause of Death</FormLabel>
                             <Input {...field} className="rounded-lg shadow-sm" />
                           </FormItem>
-                        )}/>
+                        )} />
                         <FormField control={form.control} name="deathDate" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Date of Death</FormLabel>
-                            <Input type="date" {...field} className="rounded-lg shadow-sm" />
+                            <Input type="date" {...field} value={field.value ?? ""} className="rounded-lg shadow-sm" />
                           </FormItem>
-                        )}/>
+                        )} />
                       </>
                     )}
                   </div>

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+"use client";
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Gender, SpouseType } from '@/types/family';
+import { Gender, SpouseType } from '@/types';
 
 type AddMode = 'child' | 'spouse';
 
@@ -13,14 +14,29 @@ interface AddPersonModalProps {
   onClose: () => void;
   onAdd: (data: { name: string; gender: Gender; birthYear?: number; mode: AddMode; spouseType?: SpouseType }) => void;
   parentName: string;
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  initialMode?: AddMode;
+  parentGender?: Gender;
 }
 
-export const AddPersonModal: React.FC<AddPersonModalProps> = ({ open, onClose, onAdd, parentName }) => {
+export const AddPersonModal: React.FC<AddPersonModalProps> = ({ open, onClose, onAdd, parentName, title, description, placeholder, initialMode, parentGender }) => {
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>('male');
   const [birthYear, setBirthYear] = useState('');
-  const [mode, setMode] = useState<AddMode>('child');
+  const [mode, setMode] = useState<AddMode>(initialMode || 'child');
   const [spouseType, setSpouseType] = useState<SpouseType>('current');
+
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode);
+      // If adding a spouse and parent gender is known, set opposite gender
+      if (initialMode === 'spouse' && parentGender) {
+        setGender(parentGender === 'male' ? 'female' : 'male');
+      }
+    }
+  }, [initialMode, open, parentGender]);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -40,8 +56,8 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ open, onClose, o
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="font-heading text-foreground">Add Family Member</DialogTitle>
-          <p className="text-sm text-muted-foreground">Adding relative to {parentName}</p>
+          <DialogTitle className="font-heading text-foreground">{title || 'Add Family Member'}</DialogTitle>
+          <p className="text-sm text-muted-foreground">{description || `Adding relative to ${parentName}`}</p>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -60,19 +76,19 @@ export const AddPersonModal: React.FC<AddPersonModalProps> = ({ open, onClose, o
               <Select value={spouseType} onValueChange={(v) => setSpouseType(v as SpouseType)}>
                 <SelectTrigger className="bg-secondary border-border text-foreground"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="current">Current Wife</SelectItem>
-                  <SelectItem value="ex">Ex-Wife</SelectItem>
+                  <SelectItem value="current">Current {gender === 'male' ? 'Husband' : 'Wife'}</SelectItem>
+                  <SelectItem value="ex">Ex-{gender === 'male' ? 'Husband' : 'Wife'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
           <div>
             <Label className="text-foreground">Name</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" className="bg-secondary border-border text-foreground" />
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder={placeholder || "Full name"} className="bg-secondary border-border text-foreground" />
           </div>
           <div>
-            <Label className="text-foreground">Gender</Label>
-            <Select value={gender} onValueChange={(v) => setGender(v as Gender)}>
+            <Label className="text-foreground">Gender {mode === 'spouse' && parentGender && '(Auto-selected)'}</Label>
+            <Select value={gender} onValueChange={(v) => setGender(v as Gender)} disabled={mode === 'spouse' && !!parentGender}>
               <SelectTrigger className="bg-secondary border-border text-foreground"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="male">Male</SelectItem>
@@ -157,8 +173,8 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({ open, onClose,
               <Select value={sType} onValueChange={(v) => setSType(v as SpouseType)}>
                 <SelectTrigger className="bg-secondary border-border text-foreground"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="current">Current Wife</SelectItem>
-                  <SelectItem value="ex">Ex-Wife</SelectItem>
+                  <SelectItem value="current">Current {gender === 'male' ? 'Husband' : 'Wife'}</SelectItem>
+                  <SelectItem value="ex">Ex-{gender === 'male' ? 'Husband' : 'Wife'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -170,6 +186,77 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({ open, onClose,
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={handleSave} disabled={!name.trim()}>Save</Button>
           </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+interface AddParentModalProps {
+  open: boolean;
+  onClose: () => void;
+  onAdd: (data: { name: string; gender: Gender; birthYear?: number }) => void;
+  childName: string;
+  title?: string;
+  description?: string;
+  placeholder?: string;
+}
+
+export const AddParentModal: React.FC<AddParentModalProps> = ({ 
+  open, 
+  onClose, 
+  onAdd, 
+  childName, 
+  title = "Add Parent", 
+  description, 
+  placeholder = "Enter parent name" 
+}) => {
+  const [name, setName] = useState('');
+  const [gender, setGender] = useState<Gender>('male');
+  const [birthYear, setBirthYear] = useState('');
+
+  const handleSubmit = () => {
+    if (!name.trim()) return;
+    onAdd({
+      name: name.trim(),
+      gender,
+      birthYear: birthYear ? parseInt(birthYear) : undefined,
+    });
+    setName('');
+    setBirthYear('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-card border-border">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-foreground">{title}</DialogTitle>
+          <p className="text-sm text-muted-foreground">{description || `Adding to ${childName}`}</p>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label className="text-foreground">Name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder={placeholder} className="bg-secondary border-border text-foreground" />
+          </div>
+          <div>
+            <Label className="text-foreground">Gender</Label>
+            <Select value={gender} onValueChange={(v) => setGender(v as Gender)}>
+              <SelectTrigger className="bg-secondary border-border text-foreground"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-foreground">Birth Year (optional)</Label>
+            <Input value={birthYear} onChange={e => setBirthYear(e.target.value)} placeholder="e.g. 1960" type="number" className="bg-secondary border-border text-foreground" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={!name.trim()}>Add Parent</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

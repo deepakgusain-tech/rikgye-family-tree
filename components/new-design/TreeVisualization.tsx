@@ -1,3 +1,4 @@
+"use client";
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import * as d3 from 'd3';
 import { FamilyNode } from '@/types';
@@ -7,6 +8,9 @@ interface TreeVisualizationProps {
   onNodeClick: (id: string, type: 'person' | 'spouse') => void;
   onEdit?: (id: string, type: 'person' | 'spouse') => void;
   onDelete?: (id: string) => void;
+  onAddParent?: (childId: string) => void;
+  onAddChild?: (parentId: string) => void;
+  onAddSpouse?: (nodeId: string) => void;
   selectedId?: string | null;
 }
 
@@ -140,10 +144,10 @@ function findAncestorPath(node: FamilyNode, targetId: string): string[] | null {
   return null;
 }
 
-const TreeVisualization: React.FC<TreeVisualizationProps> = ({ data, onNodeClick, onEdit, onDelete, selectedId }) => {
+const TreeVisualization: React.FC<TreeVisualizationProps> = ({ data, onNodeClick, onEdit, onDelete, onAddParent, onAddChild, onAddSpouse, selectedId }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hoveredNode, setHoveredNode] = useState<{ id: string; type: 'person' | 'spouse'; x: number; y: number } | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<{ id: string; type: 'person' | 'spouse'; x: number; y: number; parentId?: string } | null>(null);
   const [zoomTransform, setZoomTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity);
   const [isHoveringButtons, setIsHoveringButtons] = useState(false);
 
@@ -303,7 +307,7 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({ data, onNodeClick
           .attr('stroke-width', 2.5);
 
         // Set hovered node for HTML buttons - center over the node
-        setHoveredNode({ id: node.id, type: node.type, x: node.x + NODE_W / 2 - 27.5, y: node.y + NODE_H / 2 - 12.5 });
+        setHoveredNode({ id: node.id, type: node.type, x: node.x + NODE_W / 2 - 27.5, y: node.y + NODE_H / 2 - 12.5, parentId: node.parentId });
       }).on('mouseleave', function () {
         if (!isSelected) {
           d3.select(this).select('rect:nth-child(2)')
@@ -320,7 +324,7 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({ data, onNodeClick
         }, 50);
       });
     });
-  }, [data, onNodeClick, onEdit, onDelete, selectedId, isHoveringButtons]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, onNodeClick, onEdit, onDelete, onAddParent, onAddChild, onAddSpouse, selectedId, isHoveringButtons]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     renderTree();
@@ -356,13 +360,50 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({ data, onNodeClick
           }}
         >
           <button
+            className="w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onAddParent) onAddParent(hoveredNode.id);
+              setHoveredNode(null);
+            }}
+            title="Add Parent"
+          >
+            👨
+          </button>
+          <button
+            className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onAddChild) {
+                // If it's a spouse, add child to the spouse's parent (the person)
+                const childParentId = hoveredNode.type === 'spouse' && hoveredNode.parentId ? hoveredNode.parentId : hoveredNode.id;
+                onAddChild(childParentId);
+              }
+              setHoveredNode(null);
+            }}
+            title="Add Child"
+          >
+            👶
+          </button>
+          <button
+            className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onAddSpouse) onAddSpouse(hoveredNode.id);
+              setHoveredNode(null);
+            }}
+            title="Add Spouse"
+          >
+            💍
+          </button>
+          <button
             className="w-8 h-8 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               if (onEdit) onEdit(hoveredNode.id, hoveredNode.type);
               setHoveredNode(null);
             }}
-            title="Add"
+            title="Edit"
           >
             ✏
           </button>

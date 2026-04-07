@@ -1,9 +1,22 @@
 import FamilyTreeApp from '@/components/new-design/FamilyTreeApp'
-import React from 'react'
+import { buildFamilyTree, getFamilyMembers } from '@/lib/actions/family-member'
+import { prisma } from '@/lib/db/prisma-helper'
 
-const NewDesign = () => {
+const NewDesign = async () => {
+  let data: any = null
+  let rootMemberId = await prisma.familyMember.findFirst({
+    where: { parentId: null },
+  });
+
+  if (rootMemberId !== null) {
+    let result: any = await buildFamilyTree(rootMemberId.id)
+    data = result
+  }
+
+  const members = await getFamilyMembers();
+
   return (
-   <FamilyTreeApp />
+    <FamilyTreeApp data={data} members={members} />
   )
 }
 

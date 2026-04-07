@@ -1,5 +1,7 @@
+"use client";
 import { useState, useCallback } from 'react';
-import { FamilyNode, Spouse, Gender, SpouseType } from '@/types/family';
+import { FamilyNode, Spouse, Gender, SpouseType } from '@/types';
+import { createFamilyMember } from '@/lib/actions/family-member';
 
 const SAMPLE_DATA: FamilyNode = {
   id: '1',
@@ -45,10 +47,11 @@ const SAMPLE_DATA: FamilyNode = {
 let nextId = 100;
 const genId = () => String(++nextId);
 
-export function useFamilyTree() {
-  const [root, setRoot] = useState<FamilyNode>(SAMPLE_DATA);
+export function useFamilyTree(data: any) {
+  const [root, setRoot] = useState<FamilyNode | null>(data || null);
 
-  const findNode = useCallback((node: FamilyNode, id: string): FamilyNode | null => {
+  const findNode = useCallback((node: FamilyNode | null, id: string): FamilyNode | null => {
+    if (!node) return null;
     if (node.id === id) return node;
     for (const child of node.children) {
       const found = findNode(child, id);
@@ -57,32 +60,119 @@ export function useFamilyTree() {
     return null;
   }, []);
 
-  const updateTree = useCallback((node: FamilyNode, id: string, updater: (n: FamilyNode) => FamilyNode): FamilyNode => {
+  const updateTree = useCallback((node: FamilyNode | null, id: string, updater: (n: FamilyNode) => FamilyNode): FamilyNode | null => {
+    if (!node) return null;
     if (node.id === id) return updater(node);
     return {
       ...node,
-      children: node.children.map(c => updateTree(c, id, updater)),
+      children: node.children
+        .map(c => updateTree(c, id, updater))
+        .filter((c): c is FamilyNode => c !== null),
     };
   }, []);
 
+  const createMember = (data: any) => {
+    createFamilyMember(data).then((res) => {
+      console.log(res);
+    });
+  };
+
   const addChild = useCallback((parentId: string, name: string, gender: Gender, birthYear?: number) => {
-    setRoot(prev => updateTree(prev, parentId, node => ({
-      ...node,
-      children: [...node.children, { id: genId(), name, gender, birthYear, spouses: [], children: [] }],
-    })));
+    setRoot(prev => {
+      if (!prev) return prev;
+      return updateTree(prev, parentId, node => ({
+        ...node,
+        children: [...node.children, { id: genId(), name, gender, birthYear, spouses: [], children: [] }],
+      }));
+    });
   }, [updateTree]);
 
   const addSpouse = useCallback((personId: string, name: string, gender: Gender, type: SpouseType, birthYear?: number) => {
-    setRoot(prev => updateTree(prev, personId, node => ({
-      ...node,
-      spouses: [...node.spouses, { id: genId(), name, gender, type, birthYear }],
-    })));
+    setRoot(prev => {
+      if (!prev) return prev;
+      return updateTree(prev, personId, node => ({
+        ...node,
+        spouses: [...node.spouses, { id: genId(), name, gender, type, birthYear }],
+      }));
+    });
   }, [updateTree]);
+
+  const addParent = useCallback((childId: string, name: string, gender: Gender, birthYear?: number) => {
+    setRoot(prev => {
+      if (!prev) return prev;
+      const newParentId = genId();
+      const newParent: FamilyNode = {
+        id: newParentId,
+        name,
+        gender,
+        birthYear,
+        spouses: [],
+        children: []
+      };
+
+      // Function to find and replace the child node with the new parent
+      const replaceWithParent = (node: FamilyNode): FamilyNode => {
+        if (node.id === childId) {
+          // Replace this node with the new parent, and make this node a child of the parent
+          return {
+            ...newParent,
+            children: [node] // The original node becomes the first child
+          };
+        }
+
+        // Check if the childId is in the spouses array
+        const spouseIndex = node.spouses.findIndex(s => s.id === childId);
+        if (spouseIndex !== -1) {
+          const spouse = node.spouses[spouseIndex];
+          // Convert spouse to a FamilyNode
+          const spouseAsNode: FamilyNode = {
+            id: spouse.id,
+            name: spouse.name,
+            gender: spouse.gender,
+            birthYear: spouse.birthYear,
+            spouses: [],
+            children: []
+          };
+
+          // Create new parent with spouse as child
+          const parentWithSpouse: FamilyNode = {
+            ...newParent,
+            children: [spouseAsNode]
+          };
+
+          // Remove spouse from original node and add the new parent as a spouse
+          const updatedSpouses = [...node.spouses];
+          updatedSpouses.splice(spouseIndex, 1);
+          updatedSpouses.push({
+            id: newParentId,
+            name: newParent.name,
+            gender: newParent.gender,
+            type: 'current' as SpouseType,
+            birthYear: newParent.birthYear
+          });
+
+          return {
+            ...node,
+            spouses: updatedSpouses
+          };
+        }
+
+        return {
+          ...node,
+          children: node.children.map(replaceWithParent)
+        };
+      };
+
+      return replaceWithParent(prev);
+    });
+  }, []);
 
   const updatePerson = useCallback((id: string, updates: { name?: string; gender?: Gender; birthYear?: number }) => {
     setRoot(prev => {
+      if (!prev) return prev;
       // Check if it's a main node
       const updated = updateTree(prev, id, node => ({ ...node, ...updates }));
+      if (!updated) return prev;
       // Also check spouses
       const updateSpouses = (node: FamilyNode): FamilyNode => ({
         ...node,
@@ -94,15 +184,18 @@ export function useFamilyTree() {
   }, [updateTree]);
 
   const updateSpouseType = useCallback((personId: string, spouseId: string, newType: SpouseType) => {
-    setRoot(prev => updateTree(prev, personId, node => ({
-      ...node,
-      spouses: node.spouses.map(s => s.id === spouseId ? { ...s, type: newType } : s),
-    })));
+    setRoot(prev => {
+      if (!prev) return prev;
+      return updateTree(prev, personId, node => ({
+        ...node,
+        spouses: node.spouses.map(s => s.id === spouseId ? { ...s, type: newType } : s),
+      }));
+    });
   }, [updateTree]);
 
   const deletePerson = useCallback((id: string) => {
     setRoot(prev => {
-      if (prev.id === id) return prev; // Can't delete root
+      if (!prev || prev.id === id) return prev; // Can't delete root
       const removeFromTree = (node: FamilyNode): FamilyNode => ({
         ...node,
         spouses: node.spouses.filter(s => s.id !== id),
@@ -124,5 +217,5 @@ export function useFamilyTree() {
     }
   }, []);
 
-  return { root, findNode: (id: string) => findNode(root, id), addChild, addSpouse, updatePerson, updateSpouseType, deletePerson, exportData, importData };
+  return { root, findNode: (id: string) => findNode(root, id), createMember, addChild, addSpouse, addParent, updatePerson, updateSpouseType, deletePerson, exportData, importData };
 }

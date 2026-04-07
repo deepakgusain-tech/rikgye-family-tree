@@ -30,6 +30,21 @@ export interface FamilyMemberTree {
   children: FamilyMemberTree[];
 }
 
+type FamilyNode = {
+  id: string;
+  name: string;
+  gender?: string;
+  birthYear?: number;
+  spouses: {
+    id: string;
+    name: string;
+    gender?: string;
+    type?: string;
+    birthYear?: number;
+  }[];
+  children: FamilyNode[];
+};
+
 export async function createFamilyMember(data: Omit<any, "id">) {
   const currentUser = await getCurrentUser();
 
@@ -38,42 +53,45 @@ export async function createFamilyMember(data: Omit<any, "id">) {
   }
 
   const parentId = data.parentId ?? null;
+  const relation = data.relation || "CHILD";
 
   return await prisma.$transaction(async (tx) => {
     const existingMember = parentId
       ? await tx.familyMember.findUnique({
-        where: { id: parentId },
-      })
+          where: { id: parentId },
+        })
       : null;
 
     let parentToAssign: string | null = null;
 
-    if (data.relation === "FATHER") {
-      parentToAssign = existingMember?.parentId ?? null;
-    } else {
+    // If adding a FATHER, assign the existing member's parent to the new member
+    if (relation === "FATHER" && existingMember) {
+      parentToAssign = existingMember.parentId ?? null;
+    } else if (relation !== "FATHER") {
+      // For CHILD or SPOUSE, use the provided parentId
       parentToAssign = parentId;
     }
 
     const member = await tx.familyMember.create({
       data: {
         name: data.name,
-        image: data.image,
-        gender: data.gender,
+        image: Array.isArray(data.image) ? data.image : (data.image ? [data.image] : []),
+        gender: data.gender ?? "OTHER",
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
-        birthPlace: data.birthPlace,
-        isAlive: data.isAlive,
-        currentResidence: data.currentResidence,
+        birthPlace: data.birthPlace || null,
+        isAlive: data.isAlive ?? true,
+        currentResidence: data.currentResidence || null,
         deathDate: data.deathDate ? new Date(data.deathDate) : null,
-        deathPlace: data.deathPlace,
-        causeOfDeath: data.causeOfDeath,
+        deathPlace: data.deathPlace || null,
+        causeOfDeath: data.causeOfDeath || null,
         marriageDate: data.marriageDate ? new Date(data.marriageDate) : null,
-        marriagePlace: data.marriagePlace,
-        spouseMaidenName: data.spouseMaidenName,
-        spouseFather: data.spouseFather,
-        spouseMother: data.spouseMother,
-        profession: data.profession,
-        email: data.email,
-        phone: data.phone,
+        marriagePlace: data.marriagePlace || null,
+        spouseMaidenName: data.spouseMaidenName || null,
+        spouseFather: data.spouseFather || null,
+        spouseMother: data.spouseMother || null,
+        profession: data.profession || null,
+        email: data.email || null,
+        phone: data.phone || null,
 
         parent: parentToAssign
           ? { connect: { id: parentToAssign } }
@@ -85,8 +103,8 @@ export async function createFamilyMember(data: Omit<any, "id">) {
       },
     });
 
+    // Update spouse relationship if provided
     if (data.spouseId) {
-      // update current member
       await tx.familyMember.update({
         where: { id: member.id },
         data: {
@@ -97,8 +115,8 @@ export async function createFamilyMember(data: Omit<any, "id">) {
       });
     }
 
-    // ✅ Relink child → new father
-    if (data.relation === "FATHER" && parentId) {
+    // Relink child to new father
+    if (relation === "FATHER" && parentId) {
       await tx.familyMember.update({
         where: { id: parentId },
         data: {
@@ -275,6 +293,15 @@ export async function updateFamilyMember(data: any) {
   });
 }
 
+export async function getFamilyMemberByID(id: string) {
+  return await prisma.familyMember.findFirst({
+    where: {
+      id: id
+    }
+  });
+}
+
+
 export async function deleteFamilyMember(id: string, deleteChildren: boolean) {
   if (deleteChildren) {
     await prisma.familyMember.deleteMany({
@@ -295,4 +322,76 @@ export async function deleteFamilyMember(id: string, deleteChildren: boolean) {
       where: { id }
     });
   }
+}
+
+
+function getBirthYear(date?: Date | null) {
+  return date ? new Date(date).getFullYear() : undefined;
+}
+
+export async function buildFamilyTree(memberId: string): Promise<FamilyNode | null> {
+  const member = await prisma.familyMember.findUnique({
+    where: { id: memberId },
+    include: {
+      spouse: true,
+      partner: true,
+      children: {
+        include: {
+          spouse: true,
+          partner: true,
+          children: true,
+        },
+      },
+    },
+  });
+
+  if (!member) return null;
+
+  async function mapMember(m: any): Promise<FamilyNode> {
+    // Fetch children recursively
+    const children = await prisma.familyMember.findMany({
+      where: { parentId: m.id },
+      include: {
+        spouse: true,
+        partner: true,
+      },
+    });
+
+    // 🧑‍🤝‍🧑 Spouses handling
+    const spousesMap = new Map();
+
+    if (m.spouse) {
+      spousesMap.set(m.spouse.id, {
+        id: m.spouse.id,
+        name: m.spouse.name,
+        gender: m.spouse.gender,
+        type: "current",
+        birthYear: getBirthYear(m.spouse.birthDate),
+      });
+    }
+
+    // Include partner[] (ex/current)
+    if (m.partner?.length) {
+      for (const p of m.partner) {
+        spousesMap.set(p.id, {
+          id: p.id,
+          name: p.name,
+          gender: p.gender,
+          type: p.type || "ex",
+          birthYear: getBirthYear(p.birthDate),
+        });
+      }
+    }
+
+    return {
+      id: m.id,
+      name: m.name,
+      gender: m.gender || undefined,
+      birthYear: getBirthYear(m.birthDate),
+      spouses: Array.from(spousesMap.values()),
+      children: await Promise.all(children.map(mapMember)),
+    };
+  }
+
+  return mapMember(member);
 }

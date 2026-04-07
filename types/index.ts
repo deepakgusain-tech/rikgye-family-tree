@@ -36,6 +36,7 @@ export interface FamilyNode {
   birthYear?: number;
   spouses: Spouse[];
   children: FamilyNode[];
+  parentId?: string | null;
 }
 
 export interface FamilyTreeData {
