@@ -306,6 +306,7 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({ data, onNodeClick
           .attr('stroke', 'hsl(38, 75%, 55%)')
           .attr('stroke-width', 2.5);
 
+          
         // Set hovered node for HTML buttons - center over the node
         setHoveredNode({ id: node.id, type: node.type, x: node.x + NODE_W / 2 - 27.5, y: node.y + NODE_H / 2 - 12.5, parentId: node.parentId });
       }).on('mouseleave', function () {

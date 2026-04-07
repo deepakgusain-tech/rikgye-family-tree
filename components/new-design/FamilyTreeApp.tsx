@@ -9,8 +9,10 @@ import { useFamilyTree } from '@/hooks/useFamilyTree';
 import { toast } from 'sonner';
 import { Spouse, Gender, FamilyMember } from '@/types';
 import MemberFormModal from '../family-tree/member-form-modal';
-import { getFamilyMemberByID, createFamilyMember, updateFamilyMember } from '@/lib/actions/family-member';
+import { getFamilyMemberByID, createFamilyMember, updateFamilyMember, deleteFamilyMember } from '@/lib/actions/family-member';
 import { useRouter } from 'next/navigation';
+import { DeleteMemberDialog } from '../family-tree/delete-member-modal';
+import { ChildDeleteMemberModal } from '../family-tree/child-delete-member-modal';
 
 const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members }: any) => {
   const { root, findNode, createMember, addChild, addSpouse, addParent, updatePerson, updateSpouseType, deletePerson, exportData, importData } = useFamilyTree(data);
@@ -26,6 +28,10 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
   const [editModal, setEditModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedData, setSelectedData] = useState<any>(null);
+
+  const [deletingMember, setDeletingMember] = useState<FamilyMember | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCannotDeleteDialog, setShowCannotDeleteDialog] = useState(false);
 
   const router = useRouter()
 
@@ -119,6 +125,36 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
     return root ? findSpouseGender(root) : null;
   };
 
+  const handleDelete = (id: string) => {  
+
+    const hasChildren = members.some((m : any) => m.parentId === id)
+  
+    const member = members.find((m: any) => m.id === id);
+    
+    if (!member) return;
+
+    setDeletingMember(member)
+
+    if (hasChildren) {
+      setShowCannotDeleteDialog(true);
+      return;
+    }
+
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async (deleteChildren: boolean) => {
+    
+    if (!deletingMember) return;
+
+    let res = await deleteFamilyMember(deletingMember.id, deleteChildren);
+
+    console.log(res);
+
+    setShowDeleteDialog(false);
+    setDeletingMember(null);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
@@ -149,7 +185,7 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
               setSelectedType(type);
               setEditModal(true);
             }}
-            onDelete={deletePerson}
+            onDelete={handleDelete}
             onAddParent={(childId) => {
               setAddParentChildId(childId);
               setAddParentModal(true);
@@ -195,7 +231,6 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
         editingMember={null}
         onSubmit={async (data) => {
           try {
-            await createFamilyMember(data);
             toast.success(`${data.name} added to family tree!`);
             setAddModal(false);
             router.refresh();
@@ -214,7 +249,6 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
           editingMember={selectedData}
           onSubmit={async (data) => {
             try {
-              await updateFamilyMember(data);
               toast.success(`${data.name} updated successfully!`);
               setEditModal(false);
               setSelectedId(null);
@@ -237,7 +271,6 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
           editingMember={null}
           onSubmit={async (data) => {
             try {
-              await createFamilyMember(data);
               toast.success(`${data.name} added as parent!`);
               setAddParentModal(false);
               setAddParentChildId(null);
@@ -254,13 +287,12 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
       {addChildModal && (
         <MemberFormModal
           open={addChildModal}
-          onClose={() => { setAddChildModal(false); setAddChildParentId(null);   }}
+          onClose={() => { setAddChildModal(false); setAddChildParentId(null); }}
           existingMembers={members}
           defaultParentId={addChildParentId}
           editingMember={null}
           onSubmit={async (data) => {
             try {
-              await createFamilyMember(data);
               toast.success(`${data.name} added as child!`);
               setAddChildModal(false);
               setAddChildParentId(null);
@@ -291,6 +323,28 @@ const FamilyTreeApp: React.FC<{ data?: any; members?: any }> = ({ data, members 
           }
         }}
       />
+
+      <DeleteMemberDialog
+        open={showDeleteDialog}
+        member={deletingMember}
+        hasChildren={false}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setDeletingMember(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {
+        showCannotDeleteDialog && <ChildDeleteMemberModal open={showCannotDeleteDialog}
+          member={deletingMember}
+          hasChildren={false}
+          onClose={() => {
+            setShowDeleteDialog(false);
+            setDeletingMember(null);
+          }}
+          onConfirm={handleDeleteConfirm} />
+      }
     </div>
   );
 };

@@ -13,7 +13,7 @@ const NewDesign = async () => {
     data = result
   }
 
-  const members = await getFamilyMembers();
+  const members = await prisma.familyMember.findMany();
 
   return (
     <FamilyTreeApp data={data} members={members} />
