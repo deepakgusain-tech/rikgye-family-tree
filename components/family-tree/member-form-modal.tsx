@@ -38,7 +38,7 @@ import {
 import { Gender } from "@/lib/generated/prisma/enums";
 import { familyMemberSchema } from "@/lib/validators";
 import { familyMemberDefaultValues } from "@/lib/contants";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import z from "zod";
 
 type FormData = z.infer<typeof familyMemberSchema>;
@@ -251,6 +251,30 @@ const MemberFormModal = ({
 
   const isAlive = form.watch("isAlive");
 
+  const availableRelations = useMemo(() => {
+    if (initialMode === "spouse") {
+      if (parentGender === "MALE") {
+        return [
+          { label: "Wife", value: "WIFE" },
+          { label: "Ex-Wife", value: "EX_WIFE" },
+        ];
+      }
+
+      if (parentGender === "FEMALE") {
+        return [
+          { label: "Husband", value: "HUSBAND" },
+          { label: "Ex-Husband", value: "EX_HUSBAND" },
+        ];
+      }
+      return [];
+    }
+
+    return [
+      { label: "Son", value: "SON" },
+      { label: "Daughter", value: "DAUGHTER" },
+    ];
+  }, [initialMode, parentGender]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-xl h-[92vh] flex flex-col overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-0 shadow-2xl [&>button]:hidden">
@@ -305,11 +329,7 @@ const MemberFormModal = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Name</FormLabel>
-                          <Input
-                            {...field}
-                            disabled={readOnly}
-                            className="rounded-lg shadow-sm"
-                          />
+                          <Input {...field} disabled={readOnly} className="rounded-lg shadow-sm" />
                         </FormItem>
                       )}
                     />
@@ -324,8 +344,8 @@ const MemberFormModal = ({
                             <PopoverTrigger asChild>
                               <Button
                                 type="button"
-                                variant="outline"
                                 disabled={readOnly}
+                                variant="outline"
                                 className={cn(
                                   "w-full justify-start text-left font-normal rounded-lg shadow-sm",
                                   !field.value && "text-muted-foreground",
@@ -449,6 +469,33 @@ const MemberFormModal = ({
 
                     <FormField
                       control={form.control}
+                      name="relation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Relation</FormLabel>
+                          <Select
+                            value={field.value}
+                            disabled={readOnly}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="rounded-lg shadow-sm w-full">
+                              <SelectValue placeholder="Select relation" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {/* Map through the dynamic options here */}
+                              {availableRelations.map((rel) => (
+                                <SelectItem key={rel.value} value={rel.value}>
+                                  {rel.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="parentId"
                       render={() => (
                         <FormItem className="col-span-2">
@@ -463,7 +510,7 @@ const MemberFormModal = ({
                               )
                             }
                           >
-                            <SelectTrigger className="rounded-lg shadow-sm">
+                            <SelectTrigger className="rounded-lg shadow-sm w-full">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -565,37 +612,6 @@ const MemberFormModal = ({
                   <div className="grid grid-cols-2 gap-5">
                     <FormField
                       control={form.control}
-                      name="relation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Relation</FormLabel>
-                          <Select
-                            value={field.value}
-                            disabled={readOnly}
-                            onValueChange={field.onChange}
-                          >
-                            <SelectTrigger className="rounded-lg shadow-sm w-full">
-                              <SelectValue placeholder="Select relation" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="FATHER">Father</SelectItem>
-                              <SelectItem value="MOTHER">Mother</SelectItem>
-                              <SelectItem value="SON">SON</SelectItem>
-                              <SelectItem value="DAUGHTER">DAUGHTER</SelectItem>
-                              <SelectItem value="WIFE">Wife</SelectItem>
-                              <SelectItem value="EX_WIFE">Ex Wife</SelectItem>
-                              <SelectItem value="HUSBAND">Husband</SelectItem>
-                              <SelectItem value="EX_HUSBAND">
-                                Ex Husband
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="marriagePlace"
                       render={({ field }) => (
                         <FormItem>
@@ -618,8 +634,8 @@ const MemberFormModal = ({
                           <FormLabel>Marriage Date</FormLabel>
                           <Input
                             type="date"
-                            {...field}
                             disabled={readOnly}
+                            {...field}
                             className="rounded-lg shadow-sm"
                           />
                         </FormItem>
