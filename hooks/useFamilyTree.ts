@@ -1,13 +1,15 @@
 "use client";
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FamilyNode, Spouse, Gender, SpouseType } from '@/types';
-import { createFamilyMember } from '@/lib/actions/family-member';
+import { createFamilyMember, getTreeData } from '@/lib/actions/family-member.client';
+import { set } from 'zod';
 
 let nextId = 100;
 const genId = () => String(++nextId);
 
 export function useFamilyTree(data: any) {
   const [root, setRoot] = useState<FamilyNode | null>(data || null);
+  const [members, setMembers] = useState<any>([]);
 
   const findNode = useCallback((node: FamilyNode | null, id: string): FamilyNode | null => {
     if (!node) return null;
@@ -18,6 +20,14 @@ export function useFamilyTree(data: any) {
     }
     return null;
   }, []);
+
+
+  const reloadData = async () => {
+    const treeData = await getTreeData();
+    setRoot(treeData.data);
+    setMembers(treeData.members);
+    console.log({treeData});
+  }
 
   const updateTree = useCallback((node: FamilyNode | null, id: string, updater: (n: FamilyNode) => FamilyNode): FamilyNode | null => {
     if (!node) return null;
@@ -124,7 +134,13 @@ export function useFamilyTree(data: any) {
 
       return replaceWithParent(prev);
     });
+
+    
   }, []);
+
+  useEffect(() => {
+    reloadData()
+  }, [])
 
   const updatePerson = useCallback((id: string, updates: { name?: string; gender?: Gender; birthYear?: number }) => {
     setRoot(prev => {
@@ -176,5 +192,5 @@ export function useFamilyTree(data: any) {
     }
   }, []);
 
-  return { root, findNode: (id: string) => findNode(root, id), createMember, addChild, addSpouse, addParent, updatePerson, updateSpouseType, deletePerson, exportData, importData };
+  return { root, reloadData, members, findNode: (id: string) => findNode(root, id), createMember, addChild, addSpouse, addParent, updatePerson, updateSpouseType, deletePerson, exportData, importData };
 }

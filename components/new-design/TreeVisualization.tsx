@@ -54,7 +54,9 @@ interface TreeVisualizationProps {
   onEdit?: (id: string, type: "person" | "spouse") => void;
   onDelete?: (id: string) => void;
   onAdd?: (id: string) => void;
+  onAddParent?: (id: string) => void;
   onAddSpouse?: (id: string) => void;
+  onView?: (id: string, type: "person" | "spouse") => void;
   selectedId?: string | null;
 }
 
@@ -79,7 +81,9 @@ interface TreeNodeCardProps {
   onEdit?: (id: string, type: "person" | "spouse") => void;
   onDelete?: (id: string) => void;
   onAdd?: (id: string) => void;
+  onAddParent?: (id: string) => void;
   onAddSpouse?: (id: string) => void;
+  onView?: (id: string, type: "person" | "spouse") => void;
   isSelected?: boolean;
   isOnPath?: boolean; 
 }
@@ -90,7 +94,9 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
   onEdit,
   onDelete,
   onAdd,
+  onAddParent,
   onAddSpouse,
+  onView,
   isSelected = false,
   isOnPath = false,
 }) => {
@@ -127,6 +133,16 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               const targetId = node.type === "spouse" ? node.parentId ?? node.id : node.id;
+              onAddParent?.(targetId);
+            }}
+            className="w-8 h-8 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
+            title="Add Parent"
+          >👨</button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const targetId = node.type === "spouse" ? node.parentId ?? node.id : node.id;
               onAdd?.(targetId);
             }}
             className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
@@ -143,6 +159,12 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
             className="w-8 h-8 bg-pink-500 hover:bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
             title="Add Spouse"
           >♥</button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); onView?.(node.id, node.type); }}
+            className="w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
+            title="View Details"
+          >👁</button>
 
           <button
             onClick={(e) => { e.stopPropagation(); onEdit?.(node.id, node.type); }}
@@ -270,11 +292,18 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
   onEdit,
   onDelete,
   onAdd,
+  onAddParent,
   onAddSpouse,
+  onView,
   selectedId,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const nodes: LayoutNode[] = [];
   const links: LayoutLink[] = [];
@@ -334,7 +363,9 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
           onEdit={onEdit}
           onDelete={onDelete}
           onAdd={onAdd}
+          onAddParent={onAddParent}
           onAddSpouse={onAddSpouse}
+          onView={onView}
           isSelected={node.id === selectedId}
           isOnPath={isNodeOnPath}
         />
@@ -353,7 +384,7 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
     const svgWidth = containerRef.current.clientWidth;
     const treeWidth = Math.max(...nodes.map((n) => n.x)) + CARD_W;
 
-    const initialScale = 0.7;
+    const initialScale = 0.5;
     const initialX = (svgWidth - treeWidth * initialScale) / 2;
 
     svg.transition().duration(750).call(
@@ -364,6 +395,14 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
     );
 
   }, [nodes, links, onNodeClick, onEdit, onDelete, onAdd, ancestorPath, selectedId]);
+
+  if (!mounted) {
+    return (
+      <div ref={containerRef} className="w-full h-full relative bg-slate-50 overflow-hidden">
+        <svg ref={svgRef} width="100%" height="100%" className="absolute top-0 left-0" />
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-slate-50 overflow-hidden">

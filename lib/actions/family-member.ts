@@ -64,10 +64,10 @@ export async function createFamilyMember(data: Omit<any, "id">) {
 
     let parentToAssign: string | null = null;
 
-    // If adding a FATHER, assign the existing member's parent to the new member
-    if (relation === "FATHER" && existingMember) {
+    // If adding a parent, assign the existing member's parent to the new member
+    if (existingMember && ["FATHER", "MOTHER"].includes(relation)) {
       parentToAssign = existingMember.parentId ?? null;
-    } else if (relation !== "FATHER") {
+    } else if (relation !== "FATHER" && relation !== "MOTHER") {
       // For CHILD or SPOUSE, use the provided parentId
       parentToAssign = parentId;
     }
@@ -117,8 +117,8 @@ export async function createFamilyMember(data: Omit<any, "id">) {
       });
     }
 
-    // Relink child to new father
-    if (relation === "FATHER" && parentId) {
+    // Relink child to new parent
+    if (["FATHER", "MOTHER"].includes(relation) && parentId) {
       await tx.familyMember.update({
         where: { id: parentId },
         data: {
@@ -137,8 +137,8 @@ export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
   const members = await prisma.familyMember.findMany({
     orderBy: { birthDate: "asc" },
     where: {
-      spouseId: null
-    }
+      spouseId: null,
+    },
   });
 
   const formattedMembers = members.map((m) => ({
@@ -181,6 +181,25 @@ export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
   });
 
   return roots;
+}
+
+export async function getTreeData() {
+  let data: any = null;
+  let rootMemberId = await prisma.familyMember.findFirst({
+    where: { parentId: null },
+  });
+
+  if (rootMemberId !== null) {
+    let result: any = await buildFamilyTree(rootMemberId.id);
+    data = result;
+  }
+
+  const members = await prisma.familyMember.findMany();
+
+  return {
+    data,
+    members,
+  };
 }
 
 export async function getSpouses(spouseId: string) {

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { FamilyMember } from "@/types";
-import { getFamilyMembers } from "@/lib/actions/family-member";
+import { getFamilyMembers } from "@/lib/actions/family-member.client";
 
 export interface Family {
   id: string;

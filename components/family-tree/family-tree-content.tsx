@@ -9,8 +9,8 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import MemberFormModal from "./member-form-modal";
 import { DeleteMemberDialog } from "./delete-member-modal";
 
-import { deleteFamilyMember, getSpouses } from "@/lib/actions/family-member";
-import { getCurrentUser } from "@/lib/actions/user-action";
+import { deleteFamilyMember, getSpouses } from "@/lib/actions/family-member.client";
+import { getCurrentUser } from "@/lib/actions/user.client";
 import { ChildDeleteMemberModal } from "./child-delete-member-modal";
 
 const CARD_W = 150;

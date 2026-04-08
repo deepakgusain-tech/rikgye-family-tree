@@ -12,8 +12,6 @@ const NewDesign = async () => {
     let result: any = await buildFamilyTree(rootMemberId.id)
     data = result
   }
-
-  console.log(data);
   
   const members = await prisma.familyMember.findMany();
 

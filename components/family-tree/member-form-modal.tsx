@@ -27,8 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { useRouter } from "next/navigation";
-import { createFamilyMember, updateFamilyMember } from "@/lib/actions/family-member";
+import { createFamilyMember, updateFamilyMember } from "@/lib/actions/family-member.client";
 import { Gender } from "@/lib/generated/prisma/enums";
 import { familyMemberSchema } from "@/lib/validators";
 import { familyMemberDefaultValues } from "@/lib/contants";
@@ -49,6 +48,7 @@ interface MemberFormModalProps {
   description: string;
   initialMode: "person" | "spouse";
   parentGender: Gender | null;
+  readOnly?: boolean;
 }
 
 const getGenderFromRelation = (relation: string): Gender => {
@@ -79,10 +79,10 @@ const MemberFormModal = ({
   title,
   description,
   initialMode,
-  parentGender
+  parentGender,
+  readOnly = false
 
 }: MemberFormModalProps) => {
-  const router = useRouter();
 
   // Set default relation for spouse mode
   let defaultRelation = "";
@@ -217,7 +217,6 @@ const MemberFormModal = ({
       });
 
       form.reset();
-      router.refresh();
       onSubmit(newMember);
     } else {
       const updatedMember: any = await updateFamilyMember({
@@ -232,7 +231,6 @@ const MemberFormModal = ({
       });
 
       form.reset();
-      router.refresh();
       onSubmit(updatedMember);
     }
 
@@ -286,7 +284,7 @@ const MemberFormModal = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Name</FormLabel>
-                          <Input  {...field} className="rounded-lg shadow-sm" />
+                          <Input {...field} disabled={readOnly} className="rounded-lg shadow-sm" />
                         </FormItem>
                       )}
                     />
@@ -556,9 +554,11 @@ const MemberFormModal = ({
 
             <div className="shrink-0 border-t p-4 flex justify-end gap-3 bg-white shadow-[0_-6px_20px_rgba(0,0,0,0.06)]">
               <Button variant="outline" onClick={onClose}>Cancel</Button>
-              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                {editingMember ? "Save Changes" : "Add Member"}
-              </Button>
+              {!readOnly && (
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                  {editingMember ? "Save Changes" : "Add Member"}
+                </Button>
+              )}
             </div>
           </form>
         </Form>
