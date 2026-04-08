@@ -10,11 +10,12 @@ export const userSchema = z.object({
   email: z.email().min(1, "User email is required"),
   avatar: z.union([
     z.instanceof(File),
-    z.string().min(1)
-  ]),
+    z.string()
+  ]).optional(),
   password: z.string().min(1, "User password is required"),
   status: z.enum(Object.values(Status)),
   role: z.enum(Object.values(Role)),
+  level: z.string().optional(),
   createdAt: z.date().nullable().optional(),
   updatedAt: z.date().nullable().optional(),
 });
@@ -32,6 +33,7 @@ export const updateUserSchema = z.object({
   ]).optional(),
   password: z.string().min(1, "User password is required"),
   role: z.enum(Object.values(Role)),
+  level: z.string().optional(),
   createdAt: z.date().nullable().optional(),
   updatedAt: z.date().nullable().optional(),
 });

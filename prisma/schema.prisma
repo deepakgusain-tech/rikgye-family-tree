@@ -49,6 +49,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   familyMembers FamilyMember[]
+  level    String?
 
   @@map("users")
 }

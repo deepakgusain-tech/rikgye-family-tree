@@ -29,11 +29,19 @@ import { useRouter } from "next/navigation";
 import { createUser, updateUser } from "@/lib/actions/user-action";
 import { userDefaultValues } from "@/lib/contants";
 import { Role, Status } from "@/lib/generated/prisma/enums";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "../ui/command";
 
 type UserFormProps = {
   data?: User;
   update?: boolean;
 };
+
+const LEVELS = Array.from({ length: 20 }, (_, i) => ({
+  value: `L${i + 1}`,
+  label: `Level ${i + 1}`,
+}));
+
 
 const UserForm = ({ data, update = false }: UserFormProps) => {
   const [mounted, setMounted] = useState(false);
@@ -125,7 +133,7 @@ const UserForm = ({ data, update = false }: UserFormProps) => {
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel htmlFor="lastName">First name</FormLabel>
+                    <FormLabel htmlFor="lastName">Last name</FormLabel>
                     <FormControl>
                       <Input
                         id="lastName"
@@ -196,7 +204,7 @@ const UserForm = ({ data, update = false }: UserFormProps) => {
               />
             </div>
 
-            
+
 
             <div className="flex flex-col gap-5">
               <FormField
@@ -224,6 +232,61 @@ const UserForm = ({ data, update = false }: UserFormProps) => {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="level"
+              render={({ field }) => {
+                const [open, setOpen] = React.useState(false);
+
+                return (
+                  <FormItem className="flex flex-col w-full">
+                    <FormLabel>Level</FormLabel>
+
+                    <FormControl>
+                      <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="justify-between w-full"
+                          >
+                            {field.value
+                              ? LEVELS.find(
+                                (lvl) => lvl.value === field.value,
+                              )?.label
+                              : "Select level"}
+                          </Button>
+                        </PopoverTrigger>
+
+                        <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                          <Command>
+                            <CommandInput placeholder="Search level..." />
+                            <CommandEmpty>No level found.</CommandEmpty>
+
+                            <CommandGroup className="max-h-60 overflow-y-auto">
+                              {LEVELS.map((lvl) => (
+                                <CommandItem
+                                  key={lvl.value}
+                                  value={lvl.value}
+                                  onSelect={() => {
+                                    field.onChange(lvl.value);
+                                    setOpen(false);
+                                  }}
+                                >
+                                  {lvl.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
+            />
 
             <div className="flex flex-col gap-5">
               <FormField

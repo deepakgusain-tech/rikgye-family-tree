@@ -389,11 +389,11 @@ export const FamilyTreeContent: React.FC = () => {
         existingMembers={members}
         editingMember={editingMember}
         defaultParentId={defaultParentId}
-        parentName={defaultParentId ? (members.find((m) => m.id === defaultParentId)?.name ?? "") : ""}
+        parentName={defaultParentId ? members.find((m) => m.id === defaultParentId)?.name : ""}
         title={editingMember ? "Edit Member" : "Add Family Member"}
         description={editingMember ? "Update member information" : "Add a new member to your family tree"}
         initialMode="person"
-        parentGender={defaultParentId ? (members.find((m) => m.id === defaultParentId)?.gender ?? null) : null}
+        parentGender={defaultParentId ? members.find((m) => m.id === defaultParentId)?.gender : null}
       />
 
       <DeleteMemberDialog

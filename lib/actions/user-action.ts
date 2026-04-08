@@ -39,6 +39,7 @@ export async function createUser(data: z.infer<typeof userSchema>) {
             password: user.password,
             status: user.status,
             role: user.role,
+            level: user.level,
          }
       })
 
@@ -140,6 +141,7 @@ export async function updateUser(data: User, id: string) {
             password: user.password,
             status: user.status,
             role: user.role,
+            level: user.level,
          }
       })
 

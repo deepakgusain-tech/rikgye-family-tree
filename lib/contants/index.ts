@@ -13,6 +13,7 @@ export const userDefaultValues = {
     password: "",
     status: Status.ACTIVE,
     role: Role.USER,
+    level: ""
 };
 
 
