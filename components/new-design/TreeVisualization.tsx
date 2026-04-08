@@ -104,6 +104,8 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
   isOnPath = false,
   currentUser
 }) => {
+
+
   const [hovered, setHovered] = useState(false);
   const isMale = node.gender === "MALE";
   const birthYear = node.birthYear || "";
@@ -125,12 +127,16 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
         paddingRight: OVERFLOW_SIDES,
         transform: hovered ? "scale(1.03)" : "scale(1)"
       }}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => {
+        if(currentUser.role.toLowerCase() === "user" && currentUser.level.includes(node.level)) {
+          setHovered(true);
+        }
+      }}
       onMouseLeave={() => setHovered(false)}
       onClick={() => onClick(node.id, node.type)}
     >
       {/* Hover Buttons */}
-      {hovered && currentUser.level === ("L" + node.level) && (
+      {hovered  && (
         <div
           className={`absolute top-[100px] -translate-y-1/2 flex flex-col gap-2 p-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-50 transition-all duration-300
   ${hovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 pointer-events-none"}`}
@@ -200,58 +206,6 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
             🗑
           </button>
         </div>
-
-        // <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1 z-50">
-        //   {/* ADD CHILD BUTTON */}
-        //   {/* <button
-        //     onClick={(e) => {
-        //       e.stopPropagation();
-        //       const targetId = node.type === "spouse" ? node.parentId ?? node.id : node.id;
-        //       onAddParent?.(targetId);
-        //     }}
-        //     className="w-8 h-8 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-        //     title="Add Parent"
-        //   >👨</button> */}
-
-        //   <button
-        //     onClick={(e) => {
-        //       e.stopPropagation();
-        //       const targetId = node.type === "spouse" ? node.parentId ?? node.id : node.id;
-        //       onAdd?.(targetId);
-        //     }}
-        //     className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-        //     title="Add Child"
-        //   >＋</button>
-
-        //   {/* ADD SPOUSE BUTTON */}
-        //   <button
-        //     onClick={(e) => {
-        //       e.stopPropagation();
-        //       const targetId = node.type === "spouse" ? node.parentId ?? node.id : node.id;
-        //       onAddSpouse?.(targetId);
-        //     }}
-        //     className="w-8 h-8 bg-pink-500 hover:bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-        //     title="Add Spouse"
-        //   >♥</button>
-
-        //   <button
-        //     onClick={(e) => { e.stopPropagation(); onView?.(node.id, node.type); }}
-        //     className="w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-        //     title="View Details"
-        //   >👁</button>
-
-        //   <button
-        //     onClick={(e) => { e.stopPropagation(); onEdit?.(node.id, node.type); }}
-        //     className="w-8 h-8 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-        //     title="Edit"
-        //   >✏</button>
-
-        //   <button
-        //     onClick={(e) => { e.stopPropagation(); onDelete?.(node.id); }}
-        //     className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-        //     title="Delete"
-        //   >🗑</button>
-        // </div>
       )}
 
       <div
