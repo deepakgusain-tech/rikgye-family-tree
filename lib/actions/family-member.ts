@@ -290,8 +290,7 @@ export async function updateFamilyMember(data: any) {
         email: data.email,
         phone: data.phone,
         relation: data.relation,
-        type: data.type ?? "",
-
+    
         parent: data.parentId
           ? { connect: { id: data.parentId } }
           : { disconnect: true },
