@@ -127,7 +127,7 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
 
   return (
     <div
-      className="relative w-full h-screen transition-all duration-300"
+      className="relative transition-all duration-300"
       style={{
         paddingTop: OVERFLOW_TOP,
         paddingLeft: OVERFLOW_SIDES,
