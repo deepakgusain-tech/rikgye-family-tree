@@ -329,7 +329,11 @@ const MemberFormModal = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Name</FormLabel>
-                          <Input {...field} disabled={readOnly} className="rounded-lg shadow-sm" />
+                          <Input
+                            {...field}
+                            disabled={readOnly}
+                            className="rounded-lg shadow-sm"
+                          />
                         </FormItem>
                       )}
                     />
@@ -497,33 +501,42 @@ const MemberFormModal = ({
                     <FormField
                       control={form.control}
                       name="parentId"
-                      render={() => (
-                        <FormItem className="col-span-2">
-                          <FormLabel>Select Person</FormLabel>
-                          <Select
-                            disabled={readOnly}
-                            value={form.getValues("parentId") ?? "__none__"}
-                            onValueChange={(v) =>
-                              form.setValue(
-                                "parentId",
-                                v === "__none__" ? null : v,
-                              )
-                            }
-                          >
-                            <SelectTrigger className="rounded-lg shadow-sm w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">None</SelectItem>
-                              {existingMembers.map((m) => (
-                                <SelectItem key={m.id} value={m.id}>
-                                  {m.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
+                      render={() => {
+                        const selectedParent = existingMembers.find(
+                          (m) => m.id === form.getValues("parentId"),
+                        );
+
+                        const shouldLockParent =
+                          !!defaultParentId && !editingMember;
+
+                        return (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Select Person</FormLabel>
+
+                            <Select
+                              value={form.getValues("parentId") ?? ""}
+                              onValueChange={(v) =>
+                                form.setValue("parentId", v)
+                              }
+                              disabled={readOnly || shouldLockParent}
+                            >
+                              <SelectTrigger className="rounded-lg shadow-sm w-full">
+                                <SelectValue placeholder="Select person">
+                                  {selectedParent?.name || ""}
+                                </SelectValue>
+                              </SelectTrigger>
+
+                              <SelectContent>
+                                {existingMembers.map((m) => (
+                                  <SelectItem key={m.id} value={m.id}>
+                                    {m.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        );
+                      }}
                     />
                   </div>
                 </TabsContent>
