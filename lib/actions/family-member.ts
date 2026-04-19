@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db/prisma-helper";
 import { FamilyMember } from "@/types";
 import { getCurrentUser } from "./user-action";
+import { canManageLevel } from "@/lib/actions/level-permission";
 
 export interface FamilyMemberTree {
   id: string;
@@ -173,7 +174,7 @@ export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
     spouseFather: m.spouseFather || undefined,
     spouseMother: m.spouseMother || undefined,
     profession: m.profession || undefined,
-    email: m.email || undefined,
+    email: m.email || undefined, 
     phone: m.phone || undefined,
     parentId: m.parentId || null,
     userId: m.userId,
@@ -208,7 +209,17 @@ export async function getTreeData() {
     data = result;
   }
 
-  const members = await prisma.familyMember.findMany();
+ const members = await prisma.familyMember.findMany({
+  include: {
+    user: {
+      select: {
+        id: true,
+        level: true,
+        role: true,
+      },
+    },
+  },
+});
 
   return {
     data,
@@ -253,7 +264,31 @@ export async function getSpouses(spouseId: string) {
 }
 
 export async function updateFamilyMember(data: any) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.data) {
+    throw new Error("Unauthorized");
+  }
+
   return await prisma.$transaction(async (tx) => {
+    const member = await tx.familyMember.findUnique({
+      where: { id: data.id },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!member) {
+      throw new Error("Member not found");
+    }
+
+    if (
+      currentUser.data.role !== "ADMIN" &&
+      !canManageLevel(currentUser.data.level, member.user.level)
+    ) {
+      throw new Error("You cannot edit this member");
+    }
+
     const existing = await tx.familyMember.findUnique({
       where: { id: data.id },
       select: { spouseId: true },
@@ -268,29 +303,23 @@ export async function updateFamilyMember(data: any) {
         name: data.name,
         image: data.image,
         gender: data.gender,
-
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
         birthPlace: data.birthPlace,
-
         isAlive: data.isAlive,
         currentResidence: data.currentResidence,
-
         deathDate: data.deathDate ? new Date(data.deathDate) : null,
         deathPlace: data.deathPlace,
         causeOfDeath: data.causeOfDeath,
-
         marriageDate: data.marriageDate ? new Date(data.marriageDate) : null,
         marriagePlace: data.marriagePlace,
-
         spouseFather: data.spouseFather,
         spouseMother: data.spouseMother,
         spouseMaidenName: data.spouseMaidenName,
-
         profession: data.profession,
         email: data.email,
         phone: data.phone,
         relation: data.relation,
-    
+
         parent: data.parentId
           ? { connect: { id: data.parentId } }
           : { disconnect: true },
@@ -301,7 +330,6 @@ export async function updateFamilyMember(data: any) {
       },
     });
 
-    // 🔥 remove old spouse link
     if (oldSpouseId && oldSpouseId !== newSpouseId) {
       await tx.familyMember.update({
         where: { id: oldSpouseId },
@@ -311,7 +339,6 @@ export async function updateFamilyMember(data: any) {
       });
     }
 
-    // 🔥 set reverse spouse link
     if (newSpouseId && oldSpouseId !== newSpouseId) {
       await tx.familyMember.update({
         where: { id: newSpouseId },
@@ -335,7 +362,34 @@ export async function getFamilyMemberByID(id: string) {
   });
 }
 
-export async function deleteFamilyMember(id: string, deleteChildren: boolean) {
+export async function deleteFamilyMember(
+  id: string,
+  deleteChildren: boolean
+) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.data) {
+    throw new Error("Unauthorized");
+  }
+
+  const member = await prisma.familyMember.findUnique({
+    where: { id },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!member) {
+    throw new Error("Member not found");
+  }
+
+  if (
+    currentUser.data.role !== "ADMIN" &&
+    !canManageLevel(currentUser.data.level, member.user.level)
+  ) {
+    throw new Error("You cannot delete this member");
+  }
+
   if (deleteChildren) {
     await prisma.familyMember.deleteMany({
       where: {
@@ -353,7 +407,6 @@ export async function deleteFamilyMember(id: string, deleteChildren: boolean) {
     });
   }
 }
-
 function getBirthYear(date?: Date | null) {
   return date ? new Date(date).getFullYear() : undefined;
 }

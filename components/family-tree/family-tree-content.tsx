@@ -9,9 +9,13 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import MemberFormModal from "./member-form-modal";
 import { DeleteMemberDialog } from "./delete-member-modal";
 
-import { deleteFamilyMember, getSpouses } from "@/lib/actions/family-member.client";
+import {
+  deleteFamilyMember,
+  getSpouses,
+} from "@/lib/actions/family-member.client";
 import { getCurrentUser } from "@/lib/actions/user.client";
 import { ChildDeleteMemberModal } from "./child-delete-member-modal";
+import { canManageLevel } from "@/lib/actions/level-permission";
 
 const CARD_W = 150;
 const CARD_H = 140;
@@ -77,6 +81,7 @@ const NodeCard = ({
   members,
   currentUserId,
   currentUserRole,
+  currentUserLevel,
   onAdd,
   onEdit,
   onDelete,
@@ -88,8 +93,14 @@ const NodeCard = ({
 
   const isAdmin = currentUserRole === "ADMIN";
   const isOwner = member.userId === currentUserId;
-  const canEdit = isAdmin || isOwner;
-  const canDelete = isAdmin || isOwner;
+
+  const memberLevel = member.level;
+
+  const canManage =
+    isAdmin || isOwner || canManageLevel(currentUserLevel, memberLevel);
+
+  const canEdit = canManage;
+  const canDelete = canManage;
   const isMale = member.gender === "MALE";
 
   const SPOUSE_GAP = 10; // spacing between cards
@@ -106,11 +117,11 @@ const NodeCard = ({
   const getSpouse = async () => {
     const spouses = await getSpouses(member.id);
     setSpouses(spouses);
-  }
+  };
 
   useEffect(() => {
-    getSpouse()
-  }, [])
+    getSpouse();
+  }, []);
 
   return (
     <>
@@ -121,17 +132,12 @@ const NodeCard = ({
           width={CARD_W + 80}
           height={CARD_H}
           style={{ overflow: "visible" }}
-
         >
           <div className="relative group flex items-center h-full isolate">
             {/* ACTION PANEL */}
             <div
-              className="absolute -right-[-20px] top-1/2 -translate-y-1/2 flex flex-col
-            bg-white/80 backdrop-blur-xl border border-white/40
-            shadow-xl rounded-xl p-2
-            opacity-0 group-hover:opacity-100
-            -translate-x-2 group-hover:translate-x-0
-            transition-all duration-300 z-30"
+              className="absolute -right-3 top-1/2 -translate-y-1/2 flex flex-col
+bg-white border shadow-xl rounded-xl p-2 z-50"
             >
               <button
                 onClick={(e) => {
@@ -156,7 +162,6 @@ const NodeCard = ({
               )}
 
               {canDelete && (
-
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -176,19 +181,19 @@ const NodeCard = ({
                 className={`relative flex flex-col items-center cursor-pointer pt-12
                 backdrop-blur-xl overflow-visible z-10
                 border-[3px]
-                ${isMale
+                ${
+                  isMale
                     ? "border-blue-400 bg-gradient-to-br from-indigo-100/70 to-slate-100/60 rounded-2xl"
                     : "border-pink-400 bg-gradient-to-br from-pink-100/70 to-rose-100/60 rounded-[30px]"
-                  }
+                }
                 shadow-lg hover:shadow-2xl transition`}
                 style={{ width: CARD_W, height: CARD_H }}
               >
-
                 {/* IMAGE */}
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-40">
                   {member.image ? (
                     <img
-                      src={member.image[0] ?? ''}
+                      src={member.image[0] ?? ""}
                       className={`w-20 h-20 rounded-full object-cover
                       border-[3px]
                       ${isMale ? "border-blue-400" : "border-pink-400"}
@@ -216,8 +221,10 @@ const NodeCard = ({
                     : `${birthYear} - ${deathYear || "—"}`}
                 </p>
 
-                <span className={`mt-1 text-[10px] px-2 py-[3px] rounded-full
-                ${member.isAlive ? "bg-green-200" : "bg-red-200"}`}>
+                <span
+                  className={`mt-1 text-[10px] px-2 py-[3px] rounded-full
+                ${member.isAlive ? "bg-green-200" : "bg-red-200"}`}
+                >
                   {member.isAlive ? "Alive" : "Dead"}
                 </span>
               </div>
@@ -231,12 +238,11 @@ const NodeCard = ({
           const isFemale = spouse.gender === "FEMALE";
 
           return (
-
             <foreignObject
               key={index}
               x={x}
               y={-CARD_H / 2}
-              width={CARD_W}   // ✅ IMPORTANT FIX
+              width={CARD_W} // ✅ IMPORTANT FIX
               height={CARD_H}
               style={{ overflow: "visible" }}
             >
@@ -245,13 +251,14 @@ const NodeCard = ({
                   onClick={() => onView(spouse)}
                   className={`relative flex flex-col items-center cursor-pointer pt-12
               border-[3px] mr-20
-              ${isFemale
-                      ? "border-pink-400 bg-pink-100 rounded-[30px]"
-                      : "border-blue-400 bg-blue-100 rounded-2xl"}
+              ${
+                isFemale
+                  ? "border-pink-400 bg-pink-100 rounded-[30px]"
+                  : "border-blue-400 bg-blue-100 rounded-2xl"
+              }
               shadow-lg hover:shadow-xl transition`}
                   style={{ width: CARD_W, height: CARD_H }}
                 >
-
                   {/* IMAGE */}
                   <div className="absolute -top-8 left-1/2 -translate-x-1/2">
                     {spouse.image?.length ? (
@@ -270,18 +277,13 @@ const NodeCard = ({
                   <p className="mt-2 text-sm font-semibold text-center">
                     {spouse.name}
                   </p>
-
                 </div>
               </div>
             </foreignObject>
-
           );
         })}
       </g>
-
-
     </>
-
   );
 };
 
@@ -291,6 +293,7 @@ const TreeLayout = ({
   members,
   currentUserId,
   currentUserRole,
+  currentUserLevel,
   onAdd,
   onEdit,
   onDelete,
@@ -309,13 +312,14 @@ const TreeLayout = ({
         members={members}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
+        currentUserLevel={currentUserLevel}
         onAdd={onAdd}
         onEdit={onEdit}
         onDelete={onDelete}
         onView={onView}
       />
     ),
-    [members, currentUserId, currentUserRole, refreshKey]
+    [members, currentUserId, currentUserRole, refreshKey],
   );
 
   useEffect(() => {
@@ -346,7 +350,10 @@ const TreeLayout = ({
       : { name: "Family", attributes: { id: "__root__" }, children: treeData };
 
   return (
-    <div ref={containerRef} className="w-full h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+    <div
+      ref={containerRef}
+      className="w-full h-screen bg-gradient-to-br from-green-50 to-emerald-100"
+    >
       <Tree
         key={refreshKey}
         data={data}
@@ -354,7 +361,7 @@ const TreeLayout = ({
         translate={translate}
         pathFunc={centeredStepPath}
         pathClassFunc={getLinkClass}
-        nodeSize={{ x: 150 * (members.length), y: 240 }}
+        nodeSize={{ x: 150 * members.length, y: 240 }}
         separation={{ siblings: 2, nonSiblings: 1.7 }}
         depthFactor={240}
         renderCustomNodeElement={renderNode}
@@ -372,19 +379,27 @@ export const FamilyTreeContent: React.FC = () => {
   const { activeFamily, addMember, editMember, deleteMember } =
     useFamilyContext();
 
-  const members = activeFamily?.members ?? [];
+  const members = (activeFamily?.members ?? []).map((m: any) => ({
+    ...m,
+    level: m.user?.level ?? m.level ?? null,
+  }));
 
   const [loading, setLoading] = useState(true);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserLevel, setCurrentUserLevel] = useState<
+    string | number | null
+  >(null);
 
   const [viewMember, setViewMember] = useState<FamilyMember | null>(null);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [defaultParentId, setDefaultParentId] = useState<string | null>(null);
 
-  const [deletingMember, setDeletingMember] = useState<FamilyMember | null>(null);
+  const [deletingMember, setDeletingMember] = useState<FamilyMember | null>(
+    null,
+  );
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCannotDeleteDialog, setShowCannotDeleteDialog] = useState(false);
 
@@ -395,6 +410,7 @@ export const FamilyTreeContent: React.FC = () => {
       const user = await getCurrentUser();
       setCurrentUserId(user?.data?.id ?? null);
       setCurrentUserRole(user?.data?.role ?? null);
+      setCurrentUserLevel(user?.data?.level ?? null);
       setLoading(false);
     };
 
@@ -415,9 +431,9 @@ export const FamilyTreeContent: React.FC = () => {
   };
 
   const handleDelete = (member: FamilyMember) => {
-    const hasChildren = members.some((m) => m.parentId === member.id)
+    const hasChildren = members.some((m) => m.parentId === member.id);
 
-    setDeletingMember(member)
+    setDeletingMember(member);
 
     if (hasChildren) {
       setShowCannotDeleteDialog(true);
@@ -481,11 +497,23 @@ export const FamilyTreeContent: React.FC = () => {
           existingMembers={members}
           editingMember={editingMember}
           defaultParentId={defaultParentId}
-          parentName={defaultParentId ? (members.find((m) => m.id === defaultParentId)?.name ?? "") : ""}
+          parentName={
+            defaultParentId
+              ? (members.find((m) => m.id === defaultParentId)?.name ?? "")
+              : ""
+          }
           title={editingMember ? "Edit Member" : "Add Family Member"}
-          description={editingMember ? "Update member information" : "Add a new member to your family tree"}
+          description={
+            editingMember
+              ? "Update member information"
+              : "Add a new member to your family tree"
+          }
           initialMode="person"
-          parentGender={defaultParentId ? (members.find((m) => m.id === defaultParentId)?.gender ?? null) : null}
+          parentGender={
+            defaultParentId
+              ? (members.find((m) => m.id === defaultParentId)?.gender ?? null)
+              : null
+          }
         />
       </>
     );
@@ -500,6 +528,7 @@ export const FamilyTreeContent: React.FC = () => {
           members={members}
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
+          currentUserLevel={currentUserLevel}
           onAdd={handleAdd}
           onEdit={handleEdit}
           onDelete={handleDelete}
@@ -532,16 +561,18 @@ export const FamilyTreeContent: React.FC = () => {
         onConfirm={handleDeleteConfirm}
       />
 
-      {
-        showCannotDeleteDialog && <ChildDeleteMemberModal open={showCannotDeleteDialog}
+      {showCannotDeleteDialog && (
+        <ChildDeleteMemberModal
+          open={showCannotDeleteDialog}
           member={deletingMember}
           hasChildren={false}
           onClose={() => {
             setShowDeleteDialog(false);
             setDeletingMember(null);
           }}
-          onConfirm={handleDeleteConfirm} />
-      }
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
     </div>
   );
 };

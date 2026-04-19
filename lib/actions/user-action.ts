@@ -9,16 +9,16 @@ import { auth, signIn, signOut } from "@/auth";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
 import { sendMail } from "../mail";
-import bcrypt from "bcrypt"
-
+import { canManageLevel } from "@/lib/actions/level-permission";
+import bcrypt from "bcrypt";
 
 // get users
 export async function getUsers() {
-   return await prisma.user.findMany({
-      orderBy: {
-         createdAt: "desc",
-      },
-   })
+  return await prisma.user.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 }
 
 // create user
@@ -27,7 +27,7 @@ export async function createUser(data: z.infer<typeof userSchema>) {
     const user = userSchema.parse(data);
 
     const imageValue =
-      user.avatar instanceof File ? user.avatar.name : user.avatar ?? null;
+      user.avatar instanceof File ? user.avatar.name : (user.avatar ?? null);
 
     // ✅ CHECK USERNAME FIRST
     const existingUser = await prisma.user.findUnique({
@@ -38,6 +38,21 @@ export async function createUser(data: z.infer<typeof userSchema>) {
       return {
         success: false,
         message: "Username already exists",
+      };
+    }
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser?.data) {
+      return { success: false, message: "Unauthorized" };
+    }
+
+    if (
+      currentUser.data.role !== "ADMIN" &&
+      !canManageLevel(currentUser.data.level, user.level)
+    ) {
+      return {
+        success: false,
+        message: "You cannot create higher level user",
       };
     }
 
@@ -69,203 +84,228 @@ export async function createUser(data: z.infer<typeof userSchema>) {
 
 // get user by id
 export async function getUserById(id: string) {
-   try {
+  try {
+    let user = await prisma.user.findFirst({
+      where: { id },
+    });
 
-      let user = await prisma.user.findFirst({
-         where: { id }
-      })
-
-      if (user) {
-         return {
-            success: true,
-            data: user,
-            message: "User get successfully"
-         }
-      }
-
+    if (user) {
       return {
-         success: false,
-         message: "User not found"
-      }
+        success: true,
+        data: user,
+        message: "User get successfully",
+      };
+    }
 
-   } catch (error) {
-      return {
-         success: false,
-         message: formatError(error)
-      }
-   }
+    return {
+      success: false,
+      message: "User not found",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: formatError(error),
+    };
+  }
 }
 
 // validate user
 export async function validateUser(identifier: string) {
-   try {
-      const user = await prisma.user.findFirst({
-         where: {
-            OR: [
-               { username: identifier },
-               { email: identifier }
-            ]
-         }
-      });
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ username: identifier }, { email: identifier }],
+      },
+    });
 
-      if (!user) {
-         return { success: false, message: "User not found" };
-      }
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
 
-      return { success: true, data: user };
-
-   } catch (error) {
-      return {
-         success: false,
-         message: formatError(error)
-      };
-   }
+    return { success: true, data: user };
+  } catch (error) {
+    return {
+      success: false,
+      message: formatError(error),
+    };
+  }
 }
 
 // update user
 export async function updateUser(data: User, id: string) {
-   try {
+  try {
+    const user = userSchema.parse(data);
 
-      const user = userSchema.parse(data)
+    const imageValue =
+      user.avatar instanceof File ? user.avatar.name : (user.avatar ?? null);
 
-      const imageValue = user.avatar instanceof File ? user.avatar.name : user.avatar ?? null
+    let userData = await prisma.user.findFirst({
+      where: { id },
+    });
 
-      let userData = await prisma.user.findFirst({
-         where: { id }
-      })
-
-      if (!userData) {
-         return {
-            success: false,
-            message: "User not found"
-         }
-      }
-
-      await prisma.user.update({
-         where: { id },
-         data: {
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            avatar: imageValue ?? userData.avatar,
-            password: user.password,
-            status: user.status,
-            role: user.role,
-            level: user.level,
-         }
-      })
-
+    if (!userData) {
       return {
-         success: true,
-         message: "user updated successfully"
-      }
+        success: false,
+        message: "User not found",
+      };
+    }
+    const currentUser = await getCurrentUser();
 
-   } catch (error) {
+    if (!currentUser?.data) {
+      return { success: false, message: "Unauthorized" };
+    }
+
+    if (
+      currentUser.data.role !== "ADMIN" &&
+      !canManageLevel(currentUser.data.level, user.level)
+    ) {
       return {
-         success: false,
-         message: formatError(error)
-      }
-   }
+        success: false,
+        message: "You cannot update this user",
+      };
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        avatar: imageValue ?? userData.avatar,
+        password: user.password,
+        status: user.status,
+        role: user.role,
+        level: user.level,
+      },
+    });
+
+    return {
+      success: true,
+      message: "user updated successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: formatError(error),
+    };
+  }
 }
 
 // delete user
-export async function deleteUser(id: any) {
-   try {
-      await prisma.user.delete({
-         where: { id }
-      })
+export async function deleteUser(id: string) {
+  try {
+    const currentUser = await getCurrentUser();
 
-      return {
-         success: true,
-         message: "User deleted successfully"
-      }
+    if (!currentUser?.data) {
+      return { success: false, message: "Unauthorized" };
+    }
 
-   } catch (error) {
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!targetUser) {
+      return { success: false, message: "User not found" };
+    }
+
+    if (
+      currentUser.data.role !== "ADMIN" &&
+      !canManageLevel(currentUser.data.level, targetUser.level)
+    ) {
       return {
-         success: false,
-         message: formatError(error)
-      }
-   }
+        success: false,
+        message: "You cannot delete this user",
+      };
+    }
+
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    return {
+      success: true,
+      message: "User deleted successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: formatError(error),
+    };
+  }
 }
 
-
-// login 
+// login
 export async function loginFormUser(prevState: unknown, formData: FormData) {
+  try {
+    const user = loginFormSchema.parse({
+      username: formData.get("username"),
+      password: formData.get("password"),
+    });
 
-   try {
-      const user = loginFormSchema.parse({
-         username: formData.get("username"),
-         password: formData.get("password")
-      })
-
-      const res = await signIn("credentials", {
-         ...user,
-         redirect: false,
-      })
-      if (res?.error) {
-         return {
-            success: false,
-            message: "Invalid credentials",
-         }
-      }
-
-      redirect("/redirect")
-
-   } catch (error) {
-
-      if (isRedirectError(error)) {
-         throw error
-      }
-
+    const res = await signIn("credentials", {
+      ...user,
+      redirect: false,
+    });
+    if (res?.error) {
       return {
-         success: false,
-         message: "Invalid email and password"
-      }
-   }
-}
+        success: false,
+        message: "Invalid credentials",
+      };
+    }
 
+    redirect("/redirect");
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    return {
+      success: false,
+      message: "Invalid email and password",
+    };
+  }
+}
 
 export async function getCurrentUser() {
-   try {
-      const session = await auth();
-      if (session?.user) {
-         let userSession = session.user as User;
+  try {
+    const session = await auth();
+    if (session?.user) {
+      let userSession = session.user as User;
 
-         return await getUserById(userSession.id as string)
-      }
-      return null;
-   } catch (err) {
-      console.error("Failed to get current user:", err);
-      return null;
-   }
+      return await getUserById(userSession.id as string);
+    }
+    return null;
+  } catch (err) {
+    console.error("Failed to get current user:", err);
+    return null;
+  }
 }
 
 // logout user
 export async function logoutUser() {
-   try {
-      await signOut()
-      return {
-         success: true,
-         message: "logout successfully"
-      }
-   } catch (error) {
-      if (isRedirectError(error)) {
-         throw error
-      }
+  try {
+    await signOut();
+    return {
+      success: true,
+      message: "logout successfully",
+    };
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
 
-      return {
-         success: false,
-         message: "Something went wrong"
-      }
-   }
+    return {
+      success: false,
+      message: "Something went wrong",
+    };
+  }
 }
-
 
 export async function forgotPasword(user: any) {
   try {
     const template = await prisma.template.findFirst({
-      where: { name: "Forgot password" }, 
+      where: { name: "Forgot password" },
     });
 
     if (!template) {
@@ -277,7 +317,7 @@ export async function forgotPasword(user: any) {
 
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password/${user.id}`;
 
-    let emailHtml : any = template.description;
+    let emailHtml: any = template.description;
 
     emailHtml = emailHtml
       .replace(/\{\{name\}\}/g, user.name || "User")
@@ -348,7 +388,7 @@ export async function updatePassword(userId: string, password: string) {
       };
     }
 
-    let emailHtml : any = template.description;
+    let emailHtml: any = template.description;
 
     // Replace dynamic placeholders
     emailHtml = emailHtml
@@ -385,24 +425,25 @@ export async function updatePassword(userId: string, password: string) {
 }
 
 export async function updateProfile(user: any, id: string) {
-   try {
-      const imageValue = user.avatar instanceof File ? user.avatar.name : user.avatar ?? null
+  try {
+    const imageValue =
+      user.avatar instanceof File ? user.avatar.name : (user.avatar ?? null);
 
-      await prisma.user.update({
-         where: { id },
-         data: {
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            avatar: imageValue ?? user.avatar,
-         }
-      })
+    await prisma.user.update({
+      where: { id },
+      data: {
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: imageValue ?? user.avatar,
+      },
+    });
 
-      return { success: true }
-   } catch (error: any) {
-      return {
-         success: false,
-         message: error.message
-      }
-   }
+    return { success: true };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message,
+    };
+  }
 }
