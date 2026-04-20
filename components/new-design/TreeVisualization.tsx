@@ -106,21 +106,52 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
   currentUser,
 }) => {
   const [hovered, setHovered] = useState(false);
+
+  const isTouchDevice =
+    typeof window !== "undefined" &&
+    ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+
   const isMale = node.gender === "MALE";
   const birthYear = node.birthYear || "";
   const aliveStatus = node.isAlive === false ? "Dead" : "Alive";
 
+  const handleHover = (value: boolean) => {
+    if (!currentUser) return;
+
+    const role = currentUser.role?.toLowerCase();
+
+    if (
+      role === "admin" ||
+      (role === "user" && currentUser.level?.includes(node.level))
+    ) {
+      setHovered(value);
+    }
+  };
+
+  // Close on outside tap (mobile)
+  useEffect(() => {
+    if (!isTouchDevice) return;
+
+    const handleOutside = () => setHovered(false);
+    document.addEventListener("touchstart", handleOutside);
+
+    return () => {
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [isTouchDevice]);
+
   const pathBorderColor = isOnPath
     ? "border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]"
     : isMale
-      ? "border-blue-400"
-      : "border-pink-400";
+    ? "border-blue-400"
+    : "border-pink-400";
 
   const pathAvatarColor = isOnPath
     ? "bg-amber-500"
     : isMale
-      ? "bg-blue-400"
-      : "bg-pink-400";
+    ? "bg-blue-400"
+    : "bg-pink-400";
+
   const aliveColor = node.isAlive
     ? "bg-green-200 text-green-800"
     : "bg-red-200 text-red-800";
@@ -135,25 +166,27 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
         transform: hovered ? "scale(1.03)" : "scale(1)",
       }}
       onMouseEnter={() => {
-        if (
-          currentUser.role.toLowerCase() === "user" &&
-          currentUser.level.includes(node.level)
-        ) {
-          setHovered(true);
-        }
-
-        if (currentUser.role.toLowerCase() === "admin") {
-          setHovered(true);
+        if (!isTouchDevice) handleHover(true);
+      }}
+      onMouseLeave={() => {
+        if (!isTouchDevice) handleHover(false);
+      }}
+      onClick={(e) => {
+        if (isTouchDevice) {
+          e.stopPropagation();
+          setHovered((prev) => !prev);
+        } else {
+          onClick(node.id, node.type);
         }
       }}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => onClick(node.id, node.type)}
     >
-      {/* Hover Buttons */}
+      {/* Hover / Tap Actions */}
       {hovered && (
         <div
-          className={`absolute top-[100px] -translate-y-1/2 flex flex-col gap-2 p-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-50 transition-all duration-300
-  ${hovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 pointer-events-none"}`}
+          onClick={(e) => e.stopPropagation()}
+          onMouseEnter={() => !isTouchDevice && setHovered(true)}
+          onMouseLeave={() => !isTouchDevice && setHovered(false)}
+          className="absolute top-[100px] -translate-y-1/2 flex flex-col gap-2 p-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-50 transition-all duration-300"
           style={{ left: OVERFLOW_SIDES + CARD_W + 8 }}
         >
           {/* ADD CHILD */}
@@ -161,11 +194,10 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               const targetId =
-                node.type === "spouse" ? (node.parentId ?? node.id) : node.id;
+                node.type === "spouse" ? node.parentId ?? node.id : node.id;
               onAdd?.(targetId);
             }}
-            className="w-7 h-7 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xs shadow-sm transition-transform active:scale-90"
-            title="Add Child"
+            className="w-7 h-7 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xs"
           >
             ＋
           </button>
@@ -175,11 +207,10 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               const targetId =
-                node.type === "spouse" ? (node.parentId ?? node.id) : node.id;
+                node.type === "spouse" ? node.parentId ?? node.id : node.id;
               onAddSpouse?.(targetId);
             }}
-            className="w-7 h-7 bg-pink-500 hover:bg-pink-600 text-white rounded-lg flex items-center justify-center text-xs shadow-sm transition-transform active:scale-90"
-            title="Add Spouse"
+            className="w-7 h-7 bg-pink-500 hover:bg-pink-600 text-white rounded-lg flex items-center justify-center text-xs"
           >
             ♥
           </button>
@@ -190,8 +221,7 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
               e.stopPropagation();
               onView?.(node.id, node.type);
             }}
-            className="w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center text-xs shadow-sm transition-transform active:scale-90"
-            title="View Details"
+            className="w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center text-xs"
           >
             👁
           </button>
@@ -202,8 +232,7 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
               e.stopPropagation();
               onEdit?.(node.id, node.type);
             }}
-            className="w-7 h-7 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg flex items-center justify-center text-xs shadow-sm transition-transform active:scale-90"
-            title="Edit"
+            className="w-7 h-7 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg flex items-center justify-center text-xs"
           >
             ✏
           </button>
@@ -214,20 +243,21 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
               e.stopPropagation();
               onDelete?.(node.id);
             }}
-            className="w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xs shadow-sm transition-transform active:scale-90"
-            title="Delete"
+            className="w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xs"
           >
             🗑
           </button>
         </div>
       )}
 
+      {/* CARD */}
       <div
         className={`relative flex flex-col items-center pt-14 bg-white shadow-lg rounded-2xl border-[3px] transition-all duration-500
-          ${pathBorderColor}
-          ${isSelected ? "ring-4 ring-yellow-400 ring-offset-2" : ""}`}
+        ${pathBorderColor}
+        ${isSelected ? "ring-4 ring-yellow-400 ring-offset-2" : ""}`}
         style={{ width: CARD_W, height: CARD_H }}
       >
+        {/* Avatar */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className="w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden">
             {node.image ? (
@@ -246,23 +276,19 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
           </div>
         </div>
 
-        <p
-          className={`mt-2 text-sm font-semibold text-center truncate px-2 w-full ${isOnPath ? "text-amber-800" : "text-gray-800"}`}
-        >
+        <p className="mt-2 text-sm font-semibold text-center truncate px-2 w-full">
           {node.name}
         </p>
         <p className="text-[12px] text-gray-500">{birthYear}</p>
+
         <span
           className={`mt-2 text-[10px] px-2 py-[2px] rounded-full font-medium ${aliveColor}`}
         >
           {aliveStatus}
         </span>
 
-        <div className="absolute top-2 right-2 flex items-center">
-          <div
-            className={`w-8 h-5 flex items-center justify-center rounded-full text-[10px] font-bold shadow-sm 
-            ${isOnPath ? "bg-amber-600 text-white" : "bg-gray-800 text-yellow-400"}`}
-          >
+        <div className="absolute top-2 right-2">
+          <div className="w-8 h-5 flex items-center justify-center rounded-full text-[10px] font-bold bg-gray-800 text-yellow-400">
             L{node.level}
           </div>
         </div>
