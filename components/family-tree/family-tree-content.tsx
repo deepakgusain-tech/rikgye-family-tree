@@ -103,7 +103,7 @@ const NodeCard = ({
   const canDelete = canManage;
   const isMale = member.gender === "MALE";
 
-  const SPOUSE_GAP = 10; // spacing between cards
+  const SPOUSE_GAP = 10; 
 
   const birthYear = member.birthDate
     ? new Date(member.birthDate).getFullYear()

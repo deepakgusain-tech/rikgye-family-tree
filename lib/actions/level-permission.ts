@@ -1,6 +1,6 @@
 export function canManageLevel(
   currentUserLevel: number | string | null | undefined,
-  targetLevel: number | string | null | undefined
+  targetLevel: number | string | null | undefined,
 ) {
   if (currentUserLevel == null || targetLevel == null) {
     return false;
@@ -19,6 +19,14 @@ export function canManageLevel(
   if (isNaN(current) || isNaN(target)) {
     return false;
   }
+
+  console.log("canManageLevel =>", {
+    currentUserLevel,
+    targetLevel,
+    current,
+    target,
+    allowed: target >= current,
+  });
 
   return target >= current;
 }
