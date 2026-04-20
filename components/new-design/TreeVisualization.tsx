@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { createRoot } from "react-dom/client";
 import { Gender, Spouse as OriginalSpouse } from "@/types";
+import { canManageLevel } from "@/lib/actions/level-permission";
 
 // ------------------- Types ------------------- //
 
@@ -115,19 +116,6 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
   const birthYear = node.birthYear || "";
   const aliveStatus = node.isAlive === false ? "Dead" : "Alive";
 
-  const handleHover = (value: boolean) => {
-    if (!currentUser) return;
-
-    const role = currentUser.role?.toLowerCase();
-
-    if (
-      role === "admin" ||
-      (role === "user" && currentUser.level?.includes(node.level))
-    ) {
-      setHovered(value);
-    }
-  };
-
   // Close on outside tap (mobile)
   useEffect(() => {
     if (!isTouchDevice) return;
@@ -143,18 +131,36 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
   const pathBorderColor = isOnPath
     ? "border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]"
     : isMale
-    ? "border-blue-400"
-    : "border-pink-400";
+      ? "border-blue-400"
+      : "border-pink-400";
 
   const pathAvatarColor = isOnPath
     ? "bg-amber-500"
     : isMale
-    ? "bg-blue-400"
-    : "bg-pink-400";
+      ? "bg-blue-400"
+      : "bg-pink-400";
 
   const aliveColor = node.isAlive
     ? "bg-green-200 text-green-800"
     : "bg-red-200 text-red-800";
+
+  const handleHover = (value: boolean) => {
+    if (!currentUser) return;
+
+    const role = currentUser.role?.toLowerCase();
+
+    if (role === "admin") {
+      setHovered(value);
+    } else {
+      const canManage =
+        role === "admin" ||
+        (role === "user" && canManageLevel(currentUser.level, node.level));
+
+      if (canManage) {
+        setHovered(value);
+      }
+    }
+  };
 
   return (
     <div
@@ -194,7 +200,7 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               const targetId =
-                node.type === "spouse" ? node.parentId ?? node.id : node.id;
+                node.type === "spouse" ? (node.parentId ?? node.id) : node.id;
               onAdd?.(targetId);
             }}
             className="w-7 h-7 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xs"
@@ -207,7 +213,7 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               const targetId =
-                node.type === "spouse" ? node.parentId ?? node.id : node.id;
+                node.type === "spouse" ? (node.parentId ?? node.id) : node.id;
               onAddSpouse?.(targetId);
             }}
             className="w-7 h-7 bg-pink-500 hover:bg-pink-600 text-white rounded-lg flex items-center justify-center text-xs"
@@ -299,36 +305,63 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
 
 // ------------------- Layout Functions ------------------- //
 
+function getSubtreeWidth(node: FamilyNode): number {
+  const currentCount = node.spouses.filter((s) => s.type === "current").length;
+  const exCount = node.spouses.filter((s) => s.type === "ex").length;
+
+  const selfWidth =
+    CARD_W +
+    currentCount * (CARD_W + SPOUSE_GAP) +
+    exCount * (CARD_W + SPOUSE_GAP);
+
+  if (!node.children.length) return selfWidth;
+
+  const childrenWidth =
+    node.children.map(getSubtreeWidth).reduce((a, b) => a + b, 0) +
+    (node.children.length - 1) * SIBLING_GAP;
+
+  return Math.max(selfWidth, childrenWidth);
+}
+
 function placeNodes(
   node: FamilyNode,
   x: number,
   y: number,
   nodes: LayoutNode[],
   level: number = 0,
-): number {
-  const currentWives = node.spouses.filter((s) => s.type === "current");
-  const exWives = node.spouses.filter((s) => s.type === "ex");
-  const personX = x + currentWives.length * (CARD_W + SPOUSE_GAP);
+) {
+  const subtreeWidth = getSubtreeWidth(node);
+
+  const currentSpouses = node.spouses.filter((s) => s.type === "current");
+  const exSpouses = node.spouses.filter((s) => s.type === "ex");
+
+  const selfWidth =
+    CARD_W +
+    currentSpouses.length * (CARD_W + SPOUSE_GAP) +
+    exSpouses.length * (CARD_W + SPOUSE_GAP);
+
+  // Center the whole unit (current + person + ex) inside subtree
+  const startX = x + (subtreeWidth - selfWidth) / 2;
+
+  // 👉 MAIN PERSON (shifted right by current spouses)
+  const personX = startX + currentSpouses.length * (CARD_W + SPOUSE_GAP);
 
   nodes.push({
     id: node.id,
     name: node.name,
     gender: node.gender,
-    birthYear: node.birthYear,
-    image: node.image,
     x: personX,
     y,
     type: "person",
     level,
-    isAlive: node.isAlive,
   });
 
-  currentWives.forEach((spouse, i) => {
+  // 👉 CURRENT spouses (LEFT)
+  currentSpouses.forEach((spouse, i) => {
     nodes.push({
       id: spouse.id,
       name: spouse.name,
       gender: spouse.gender,
-      birthYear: spouse.birthYear,
       x: personX - (i + 1) * (CARD_W + SPOUSE_GAP),
       y,
       type: "spouse",
@@ -338,12 +371,12 @@ function placeNodes(
     });
   });
 
-  exWives.forEach((spouse, i) => {
+  // 👉 EX spouses (RIGHT)
+  exSpouses.forEach((spouse, i) => {
     nodes.push({
       id: spouse.id,
       name: spouse.name,
       gender: spouse.gender,
-      birthYear: spouse.birthYear,
       x: personX + CARD_W + SPOUSE_GAP + i * (CARD_W + SPOUSE_GAP),
       y,
       type: "spouse",
@@ -353,39 +386,16 @@ function placeNodes(
     });
   });
 
-  const unitWidth = CARD_W + node.spouses.length * (CARD_W + SPOUSE_GAP);
-  if (!node.children.length) return unitWidth;
-
-  const childY = y + CARD_H + V_GAP;
+  // 👉 CHILDREN
   let childX = x;
-  const childWidths: number[] = [];
 
   node.children.forEach((child) => {
-    const w = placeNodes(child, childX, childY, nodes, level + 1);
-    childWidths.push(w);
-    childX += w + SIBLING_GAP;
+    const childWidth = getSubtreeWidth(child);
+
+    placeNodes(child, childX, y + CARD_H + V_GAP, nodes, level + 1);
+
+    childX += childWidth + SIBLING_GAP;
   });
-
-  const totalChildrenWidth =
-    childWidths.reduce((a, b) => a + b, 0) +
-    (node.children.length - 1) * SIBLING_GAP;
-  const parentCenterX = personX + CARD_W / 2;
-  const childrenCenterX = x + totalChildrenWidth / 2;
-  const offset = parentCenterX - childrenCenterX;
-
-  if (offset !== 0) {
-    const collectIds = (n: FamilyNode): string[] => {
-      const ids = [n.id, ...n.spouses.map((s) => s.id)];
-      n.children.forEach((c) => ids.push(...collectIds(c)));
-      return ids;
-    };
-    const idsToShift = new Set(node.children.flatMap(collectIds));
-    nodes.forEach((n) => {
-      if (idsToShift.has(n.id)) n.x += offset;
-    });
-  }
-
-  return Math.max(unitWidth, totalChildrenWidth + (offset > 0 ? offset : 0));
 }
 
 function computeLinks(
