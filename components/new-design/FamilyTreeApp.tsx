@@ -58,60 +58,82 @@ const FamilyTreeApp: React.FC<{
 
   // Fetch selected data when selectedId changes
   useEffect(() => {
-    const fetchSelectedData = async () => {
-      if (!selectedId) {
+  const formatDate = (value: any) => {
+    if (!value) return "";
+    return new Date(value).toISOString().split("T")[0];
+  };
+
+  const fetchSelectedData = async () => {
+    if (!selectedId) {
+      setSelectedData(null);
+      return;
+    }
+
+    try {
+      const member = await getFamilyMemberByID(selectedId);
+
+      if (!member) {
         setSelectedData(null);
         return;
       }
 
-      try {
-        let member = await getFamilyMemberByID(selectedId);
+      const formattedMember = {
+        ...member,
+        birthDate: formatDate(member.birthDate),
+        deathDate: formatDate(member.deathDate),
+        marriageDate: formatDate(member.marriageDate),
+      };
 
-        if (!member) {
-          setSelectedData(null);
-          return;
-        }
+      const node = findNode(selectedId);
 
-        const node = findNode(selectedId);
-        if (node) {
-          setSelectedData({ ...member, isSpouse: false });
-          return;
-        }
+      if (node) {
+        setSelectedData({
+          ...formattedMember,
+          isSpouse: false,
+        });
+        return;
+      }
 
-        // Check spouses
-        const findSpouse = (
-          n: typeof root,
-        ): { spouse: Spouse; parentId: string } | null => {
-          if (!n) return null;
-          for (const s of n.spouses) {
-            if (s.id === selectedId) return { spouse: s, parentId: n.id };
+      // Check spouses
+      const findSpouse = (
+        n: typeof root
+      ): { spouse: Spouse; parentId: string } | null => {
+        if (!n) return null;
+
+        for (const s of n.spouses) {
+          if (s.id === selectedId) {
+            return { spouse: s, parentId: n.id };
           }
-          for (const c of n.children) {
-            const found = findSpouse(c);
-            if (found) return found;
-          }
-          return null;
-        };
-
-        const spouseResult = root ? findSpouse(root) : null;
-        if (spouseResult) {
-          setSelectedData({
-            ...member,
-            isSpouse: true,
-            spouseType: spouseResult.spouse.type,
-            parentId: spouseResult.parentId,
-          });
-        } else {
-          setSelectedData(null);
         }
-      } catch (error) {
-        console.error("Error fetching selected data:", error);
+
+        for (const c of n.children) {
+          const found = findSpouse(c);
+          if (found) return found;
+        }
+
+        return null;
+      };
+
+      const spouseResult = root ? findSpouse(root) : null;
+
+      if (spouseResult) {
+        setSelectedData({
+          ...formattedMember,
+          isSpouse: true,
+          spouseType: spouseResult.spouse.type,
+          parentId: spouseResult.parentId,
+        });
+      } else {
         setSelectedData(null);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching selected data:", error);
+      setSelectedData(null);
+    }
+  };
 
-    fetchSelectedData();
-  }, [selectedId]);
+  fetchSelectedData();
+}, [selectedId, root]);
 
   // Find a parent node to add to (default to selected or root)
   const addParentId =
@@ -302,7 +324,7 @@ const FamilyTreeApp: React.FC<{
               ? members.find((m: any) => m.id === selectedData.parentId)?.name
               : ""
           }
-          title={selectedData.isSpouse ? "Edit Spouse" : "Edit Family Member"}
+          title={"Edit Family Member"}
           description={
             selectedData.isSpouse
               ? "Update spouse information"

@@ -40,6 +40,7 @@ import { familyMemberSchema } from "@/lib/validators";
 import { familyMemberDefaultValues } from "@/lib/contants";
 import { useEffect, useMemo } from "react";
 import z from "zod";
+import PreviewItem from "./preview";
 
 type FormData = z.infer<typeof familyMemberSchema>;
 
@@ -89,15 +90,15 @@ const MemberFormModal = ({
   parentGender,
   readOnly = false,
 }: MemberFormModalProps) => {
-  // Set default relation for spouse mode
-  let defaultRelation = "";
-  if (initialMode === "spouse") {
-    if (parentGender === Gender.MALE) {
-      defaultRelation = "WIFE";
-    } else if (parentGender === Gender.FEMALE) {
-      defaultRelation = "HUSBAND";
-    }
+let defaultRelation = "SON";
+
+if (initialMode === "spouse") {
+  if (parentGender === Gender.MALE) {
+    defaultRelation = "WIFE";
+  } else if (parentGender === Gender.FEMALE) {
+    defaultRelation = "HUSBAND";
   }
+}
 
   const form = useForm<FormData>({
     resolver: zodResolver(familyMemberSchema) as any,
@@ -232,13 +233,29 @@ const MemberFormModal = ({
       onSubmit(newMember);
     } else {
       const updatedMember: any = await updateFamilyMember({
-        ...editingMember,
-        ...values,
+        id: editingMember.id,
+        name: values.name,
+        image: values.image ?? [],
+        gender: derivedGender,
+        birthDate: values.birthDate || null,
+        birthPlace: values.birthPlace || null,
+        isAlive: values.isAlive,
+        currentResidence: values.currentResidence || null,
+        deathDate: values.isAlive ? null : values.deathDate || null,
+        deathPlace: values.isAlive ? null : values.deathPlace || null,
+        causeOfDeath: values.isAlive ? null : values.causeOfDeath || null,
+        marriageDate: values.marriageDate || null,
+        marriagePlace: values.marriagePlace || null,
+        spouseFather: values.spouseFather || null,
+        spouseMother: values.spouseMother || null,
+        spouseMaidenName: values.spouseMaidenName || null,
+        profession: values.profession || null,
+        email: values.email || null,
+        phone: values.phone || null,
         relation,
         spouseId,
         parentId,
-        image: values.image,
-        gender: derivedGender,
+        type: values.type || "current",
         userId: values.userId ?? null,
       });
 
@@ -546,77 +563,70 @@ const MemberFormModal = ({
                   <FormField
                     control={form.control}
                     name="image"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col gap-4">
-                        {/* ✅ Upload Box */}
-                        <label
-                          className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center bg-white transition
-          ${
-            readOnly
-              ? "opacity-70 cursor-not-allowed pointer-events-none"
-              : "cursor-pointer hover:shadow-lg"
-          }`}
-                        >
-                          <UploadCloud className="text-emerald-500 mb-2" />
-                          <p>Upload Images</p>
+                    render={({ field }) => {
+                      const files: (File | string)[] = field.value || [];
 
-                          {!readOnly && ( // ✅ block file input completely
-                            <input
-                              type="file"
-                              className="hidden"
-                              onChange={(e) => {
-                                if (!e.target.files) return;
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  field.onChange([file]);
-                                }
-                              }}
-                            />
-                          )}
-                        </label>
+                      return (
+                        <FormItem className="flex flex-col gap-4">
+                          {/* ✅ Upload Box */}
+                          <label
+                            className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center bg-white transition
+ ${
+   readOnly
+     ? "opacity-70 cursor-not-allowed pointer-events-none"
+     : "cursor-pointer hover:shadow-lg"
+ }`}
+                          >
+                            <UploadCloud className="text-emerald-500 mb-2" />
+                            <p>Upload Images</p>
 
-                        {/* ✅ Preview Images */}
-                        {(field.value?.length ?? 0) > 0 && (
-                          <div className="flex flex-wrap gap-3">
-                            {field.value?.map((img: File | string, idx) => {
-                              const src =
-                                img instanceof File
-                                  ? URL.createObjectURL(img)
-                                  : img;
+                            {!readOnly && (
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  if (!e.target.files) return;
 
-                              return (
-                                <div
-                                  key={idx}
-                                  className="relative w-24 h-24 rounded-xl overflow-hidden shadow-md"
-                                >
-                                  <img
+                                  const newFiles = Array.from(e.target.files);
+
+                                  field.onChange([
+                                    ...(field.value || []),
+                                    ...newFiles, // ✅ append multiple files
+                                  ]);
+                                }}
+                              />
+                            )}
+                          </label>
+
+                          {/* ✅ Preview Images */}
+                          {files.length > 0 && (
+                            <div className="flex flex-wrap gap-3">
+                              {files.map((img, idx) => {
+                                const src =
+                                  img instanceof File
+                                    ? URL.createObjectURL(img)
+                                    : img;
+
+                                return (
+                                  <PreviewItem
+                                    key={idx}
                                     src={src}
-                                    className="w-full h-full object-cover"
+                                    readOnly={readOnly}
+                                    onDelete={() =>
+                                      field.onChange(
+                                        files.filter((_, i) => i !== idx),
+                                      )
+                                    }
                                   />
-
-                                  {/* ❌ Hide delete in readOnly */}
-                                  {!readOnly && (
-                                    <button
-                                      type="button"
-                                      className="absolute top-1 right-1 bg-white rounded-full p-1"
-                                      onClick={() =>
-                                        field.onChange(
-                                          (field.value || []).filter(
-                                            (_, i) => i !== idx,
-                                          ),
-                                        )
-                                      }
-                                    >
-                                      <X className="w-3 h-3 text-red-500" />
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </FormItem>
-                    )}
+                                );
+                              })}
+                            </div>
+                          )}
+                        </FormItem>
+                      );
+                    }}
                   />
                 </TabsContent>
 

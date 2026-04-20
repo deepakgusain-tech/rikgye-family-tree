@@ -281,44 +281,66 @@ export async function updateFamilyMember(data: any) {
     if (!member) {
       throw new Error("Member not found");
     }
-
-    if (
-      currentUser.data.role !== "ADMIN" &&
-      !canManageLevel(currentUser.data.level, member.user.level)
-    ) {
-      throw new Error("You cannot edit this member");
-    }
-
+    
+    // ✅ Existing spouse relation
     const existing = await tx.familyMember.findUnique({
       where: { id: data.id },
       select: { spouseId: true },
     });
 
     const oldSpouseId = existing?.spouseId ?? null;
-    const newSpouseId = data.spouseId ?? null;
+    const newSpouseId = data.spouseId || null;
 
+    // ✅ Update Member
     const updated = await tx.familyMember.update({
       where: { id: data.id },
       data: {
         name: data.name,
-        image: data.image,
+        image: Array.isArray(data.image)
+          ? data.image
+          : data.image
+            ? [data.image]
+            : [],
         gender: data.gender,
-        birthDate: data.birthDate ? new Date(data.birthDate) : null,
-        birthPlace: data.birthPlace,
-        isAlive: data.isAlive,
-        currentResidence: data.currentResidence,
-        deathDate: data.deathDate ? new Date(data.deathDate) : null,
-        deathPlace: data.deathPlace,
-        causeOfDeath: data.causeOfDeath,
-        marriageDate: data.marriageDate ? new Date(data.marriageDate) : null,
-        marriagePlace: data.marriagePlace,
-        spouseFather: data.spouseFather,
-        spouseMother: data.spouseMother,
-        spouseMaidenName: data.spouseMaidenName,
-        profession: data.profession,
-        email: data.email,
-        phone: data.phone,
-        relation: data.relation,
+
+        birthDate: data.birthDate
+          ? new Date(data.birthDate)
+          : null,
+
+        birthPlace: data.birthPlace || null,
+
+        isAlive: data.isAlive ?? true,
+
+        currentResidence: data.currentResidence || null,
+
+        deathDate:
+          data.isAlive === false && data.deathDate
+            ? new Date(data.deathDate)
+            : null,
+
+        deathPlace:
+          data.isAlive === false
+            ? data.deathPlace || null
+            : null,
+
+        causeOfDeath:
+          data.isAlive === false
+            ? data.causeOfDeath || null
+            : null,
+
+        marriageDate: data.marriageDate
+          ? new Date(data.marriageDate)
+          : null,
+
+        marriagePlace: data.marriagePlace || null,
+        spouseFather: data.spouseFather || null,
+        spouseMother: data.spouseMother || null,
+        spouseMaidenName: data.spouseMaidenName || null,
+        profession: data.profession || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        relation: data.relation || null,
+        type: data.type || member.type,
 
         parent: data.parentId
           ? { connect: { id: data.parentId } }
@@ -330,6 +352,7 @@ export async function updateFamilyMember(data: any) {
       },
     });
 
+    // ✅ Remove old spouse back-link
     if (oldSpouseId && oldSpouseId !== newSpouseId) {
       await tx.familyMember.update({
         where: { id: oldSpouseId },
@@ -339,6 +362,7 @@ export async function updateFamilyMember(data: any) {
       });
     }
 
+    // ✅ Add new spouse back-link
     if (newSpouseId && oldSpouseId !== newSpouseId) {
       await tx.familyMember.update({
         where: { id: newSpouseId },

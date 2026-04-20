@@ -29,14 +29,34 @@ export async function createFamilyMember(data: any) {
 
 export async function updateFamilyMember(data: any) {
   if (!data?.id) throw new Error("Missing member id for update");
+
   const res = await fetch(`/api/family-member/${data.id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
     cache: "no-store",
   });
-  if (!res.ok) throw new Error("Failed to update family member");
-  return res.json();
+
+  const text = await res.text();
+  let result: any = null;
+
+  try {
+    result = text ? JSON.parse(text) : null;
+  } catch {
+    result = { error: text };
+  }
+
+  if (!res.ok) {
+    console.error("PATCH STATUS:", res.status);
+    console.error("PATCH RESPONSE:", result);
+    throw new Error(
+      result?.error ||
+      result?.message ||
+      `Failed to update family member (${res.status})`
+    );
+  }
+
+  return result;
 }
 
 export async function deleteFamilyMember(id: string, deleteChildren: boolean) {

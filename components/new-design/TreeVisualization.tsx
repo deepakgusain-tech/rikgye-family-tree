@@ -24,6 +24,8 @@ export interface FamilyNodeSpouse {
   name: string;
   gender: Gender;
   birthYear?: number;
+  image?: string;
+  isAlive?: boolean;
   type: "current" | "ex";
 }
 
@@ -354,6 +356,9 @@ function placeNodes(
     y,
     type: "person",
     level,
+    isAlive: node.isAlive,
+    birthYear: node.birthYear,
+    image: node.image,
   });
 
   // 👉 CURRENT spouses (LEFT)
@@ -368,10 +373,12 @@ function placeNodes(
       spouseType: "current",
       parentId: node.id,
       level,
+      isAlive: spouse.isAlive ?? true,
+      birthYear: spouse.birthYear,
+      image: spouse.image,
     });
   });
 
-  // 👉 EX spouses (RIGHT)
   exSpouses.forEach((spouse, i) => {
     nodes.push({
       id: spouse.id,
@@ -383,6 +390,9 @@ function placeNodes(
       spouseType: "ex",
       parentId: node.id,
       level,
+      isAlive: spouse.isAlive ?? true,
+      birthYear: spouse.birthYear,
+      image: spouse.image,
     });
   });
 
