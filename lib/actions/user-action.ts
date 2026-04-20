@@ -56,6 +56,8 @@ export async function createUser(data: z.infer<typeof userSchema>) {
       };
     }
 
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+
     await prisma.user.create({
       data: {
         username: user.username,
@@ -63,7 +65,7 @@ export async function createUser(data: z.infer<typeof userSchema>) {
         lastName: user.lastName,
         email: user.email,
         avatar: imageValue,
-        password: user.password,
+        password: hashedPassword,
         status: user.status,
         role: user.role,
         level: user.level,
@@ -173,7 +175,6 @@ export async function updateUser(data: User, id: string) {
         lastName: user.lastName,
         email: user.email,
         avatar: imageValue ?? userData.avatar,
-        password: user.password,
         status: user.status,
         role: user.role,
         level: user.level,
@@ -308,20 +309,65 @@ export async function forgotPasword(user: any) {
       where: { name: "Forgot password" },
     });
 
-    if (!template) {
-      return {
-        success: false,
-        message: "Email template not found",
-      };
+    const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password/${user.id}`;
+
+    let emailHtml: any;
+
+    if (template) {
+      emailHtml = template.description;
+      emailHtml = emailHtml
+        .replace(/\{\{name\}\}/g, user.name || "User")
+        .replace(/\{\{reset_link\}\}/g, resetLink);
+    } else {
+      emailHtml = `
+        <div style="background:#f1f3f4; padding:20px; font-family:Arial, sans-serif;">
+  <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:8px; border:1px solid #e5e7eb; padding:30px;">
+
+    <h2 style="margin-top:0; color:#111827;">
+      🔐 Reset Your Password
+    </h2>
+
+    <p style="font-size:14px; color:#374151;">
+      Hello <strong>${user.name}</strong>,
+    </p>
+
+    <p style="font-size:14px; color:#374151;">
+      We received a request to reset your password for your account.
+    </p>
+
+    <p style="font-size:14px; color:#374151;">
+      Click the button below to reset your password:
+    </p>
+
+    <!-- BUTTON -->
+    <div style="text-align:center; margin:25px 0;">
+      <a href="${resetLink}"
+         style="background:#16a34a; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:6px; font-size:14px; font-weight:bold; display:inline-block;">
+        Reset Password
+      </a>
+    </div>
+
+    <p style="font-size:13px; color:#6b7280;">
+      If you didn’t request this, you can safely ignore this email. Your password will not be changed.
+    </p>
+
+    <p style="font-size:13px; color:#6b7280;">
+      For security reasons, this link will expire soon.
+    </p>
+
+    <hr style="margin:25px 0; border:none; border-top:1px solid #e5e7eb;" />
+
+    <p style="font-size:12px; color:#9ca3af;">
+      If the button doesn’t work, copy and paste the link below into your browser:
+    </p>
+
+    <p style="font-size:12px; color:#2563eb; word-break:break-all;">
+      ${resetLink}
+    </p>
+  </div>
+</div>
+       `;
     }
-
-    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password/${user.id}`;
-
-    let emailHtml: any = template.description;
-
-    emailHtml = emailHtml
-      .replace(/\{\{name\}\}/g, user.name || "User")
-      .replace(/\{\{reset_link\}\}/g, resetLink);
 
     await sendMail({
       to: user.email,

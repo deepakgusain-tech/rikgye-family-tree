@@ -190,7 +190,6 @@ export default function SettingsPage() {
       [{ align: [] }],
       [{ list: "ordered" }, { list: "bullet" }],
       ["link", "image"],
-      ["code-block"],
       ["clean"],
     ],
   };
@@ -524,9 +523,8 @@ export default function SettingsPage() {
                     <div
                       className="text-sm"
                       dangerouslySetInnerHTML={{
-                        __html: templateDescription
-                          .replace(/\{\{name\}\}/g, "John Doe")
-                          .replace(/\{\{reset_link\}\}/g, "#"),
+                        __html:
+                          templateDescription || "<p>No content yet...</p>",
                       }}
                     />
                   </div>
