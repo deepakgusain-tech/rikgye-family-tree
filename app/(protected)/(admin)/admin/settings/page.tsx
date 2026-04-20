@@ -12,12 +12,13 @@ import {
 } from "lucide-react";
 
 import { motion } from "framer-motion";
-import { Editor } from "@tinymce/tinymce-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import dynamic from "next/dynamic";
+import "quill/dist/quill.snow.css";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -41,20 +42,9 @@ type Template = {
   description: string;
 };
 
-type SettingsForm = {
-  siteTitle: string;
-  siteKeywords: string;
-  siteDescription: string;
-  siteUrl: string;
-  logo?: string | File;
-  favicon?: string | File;
-  isSMTP: boolean;
-  host: string;
-  username: string;
-  password: string;
-  port: number | null;
-  encryption: string;
-};
+const ReactQuill = dynamic(() => import("react-quill-new"), {
+  ssr: false,
+});
 
 export default function SettingsPage() {
   const [formData, setFormData] = useState<any>({
@@ -191,6 +181,19 @@ export default function SettingsPage() {
     getData();
     fetchTemplates();
   }, []);
+
+  const quillModules = {
+    toolbar: [
+      ["undo", "redo"],
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline"],
+      [{ align: [] }],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image"],
+      ["code-block"],
+      ["clean"],
+    ],
+  };
 
   return (
     <div className="p-8 space-y-6 min-h-screen">
@@ -469,7 +472,7 @@ export default function SettingsPage() {
                     onChange={(e) => setTemplateName(e.target.value)}
                   />
 
-                  <Editor
+                  {/* <Editor
                     apiKey="9b9wji2lpvz93l03y7ai6kb09gpxzcpsnrxemixdpbpsuq8l"
                     value={templateDescription}
                     onEditorChange={(content) =>
@@ -504,7 +507,17 @@ export default function SettingsPage() {
                       content_style:
                         "body { font-family: Arial, sans-serif; font-size:14px }",
                     }}
-                  />
+                  /> */}
+
+                  <div className="editor-wrapper">
+                    <ReactQuill
+                      theme="snow"
+                      value={templateDescription}
+                      onChange={setTemplateDescription}
+                      modules={quillModules}
+                      className="tiny-look-editor"
+                    />
+                  </div>
 
                   <div className="border p-4 rounded-md bg-green-50 text-green-800">
                     <p className="font-semibold mb-2">Preview:</p>
@@ -605,65 +618,38 @@ export default function SettingsPage() {
       </Dialog>
       {/* EDIT TEMPLATE DIALOG */}
 
-     <Dialog open={editOpen} onOpenChange={setEditOpen}>
-  <DialogContent className="w-[95vw] max-w-none h-[100vh] overflow-y-auto p-6">
-    <DialogTitle>Edit Template</DialogTitle>
-    <DialogDescription>Update template content</DialogDescription>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="w-[95vw] max-w-4xl p-6 rounded-xl">
+          <DialogTitle className="text-xl font-semibold">
+            Edit Template
+          </DialogTitle>
 
-    <div className="space-y-4 mt-4">
-      {/* Template Name */}
-      <Input
-        placeholder="Template Name"
-        value={editTemplateName}
-        onChange={(e) => setEditTemplateName(e.target.value)}
-      />
+          <div className="space-y-4 mt-4">
+            <Input
+              placeholder="Template Name"
+              value={editTemplateName}
+              onChange={(e) => setEditTemplateName(e.target.value)}
+            />
 
-      {/* TinyMCE Editor */}
-      <Editor
-        apiKey={process.env.NEXT_APP_TINYMCE_KEY}
-        value={editTemplateDescription}
-        onEditorChange={(content) => setEditTemplateDescription(content)}
-        init={{
-          height: 600,
-          menubar: false,
-          plugins: [
-            "advlist",
-            "autolink",
-            "lists",
-            "link",
-            "image",
-            "charmap",
-            "preview",
-            "anchor",
-            "searchreplace",
-            "visualblocks",
-            "code",
-            "fullscreen",
-            "insertdatetime",
-            "media",
-            "table",
-            "help",
-            "wordcount",
-            "codesample",
-          ],
-          toolbar:
-            "undo redo | blocks | bold italic underline | alignleft aligncenter alignright | " +
-            "bullist numlist | link image | codesample | code | fullscreen",
-          content_style:
-            "body { font-family: Arial, sans-serif; font-size:14px }",
-        }}
-      />
+            <div className="editor-wrapper">
+              <ReactQuill
+                theme="snow"
+                value={editTemplateDescription}
+                onChange={setEditTemplateDescription}
+                modules={quillModules}
+                className="tiny-look-editor"
+              />
+            </div>
 
-      {/* Update Button */}
-      <Button
-        onClick={updateTemplate}
-        className="bg-green-600 hover:bg-green-700 text-white w-full mt-2"
-      >
-        Update Template
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
+            <Button
+              onClick={updateTemplate}
+              className="bg-green-600 hover:bg-green-700 text-white w-full"
+            >
+              Update Template
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

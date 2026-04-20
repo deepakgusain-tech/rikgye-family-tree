@@ -155,3 +155,71 @@ html {
   overflow-y: scroll;
   scrollbar-gutter: stable;
 }
+
+/* =========================
+   TEMPLATE / QUILL EDITOR
+========================= */
+
+.editor-wrapper {
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+/* Toolbar */
+.tiny-look-editor .ql-toolbar {
+  border: none !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+/* Editor outer area */
+.tiny-look-editor .ql-container {
+  border: none !important;
+  min-height: 300px;
+  font-size: 14px;
+  background: #ffffff;
+}
+
+/* Typing area */
+.tiny-look-editor .ql-editor {
+  min-height: 340px;
+  padding: 14px;
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* Toolbar dropdown text */
+.tiny-look-editor .ql-picker {
+  font-size: 14px;
+}
+
+/* Hover buttons */
+.tiny-look-editor .ql-toolbar button:hover {
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+
+/* Active toolbar buttons */
+.tiny-look-editor .ql-toolbar button.ql-active {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 4px;
+}
+
+/* Placeholder */
+.tiny-look-editor .ql-editor.ql-blank::before {
+  color: #9ca3af;
+  font-style: normal;
+}
+
+/* Preview Box */
+.template-preview {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  border-radius: 10px;
+  padding: 16px;
+  color: #166534;
+}
