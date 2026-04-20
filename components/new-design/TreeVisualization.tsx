@@ -113,9 +113,14 @@ const TreeNodeCard: React.FC<TreeNodeCardProps> = ({
   const isTouchDevice =
     typeof window !== "undefined" &&
     ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    
 
   const isMale = node.gender === "MALE";
   const birthYear = node.birthYear || "";
+
+  console.log({node});
+  
+
   const aliveStatus = node.isAlive === false ? "Dead" : "Alive";
 
   // Close on outside tap (mobile)
@@ -474,6 +479,8 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
 
   const nodes: LayoutNode[] = [];
   const links: LayoutLink[] = [];
+  console.log(data);
+  
   placeNodes(data, 0, 0, nodes);
   computeLinks(data, nodes, links);
 

@@ -100,6 +100,9 @@ if (initialMode === "spouse") {
   }
 }
 
+console.log(editingMember);
+
+
   const form = useForm<FormData>({
     resolver: zodResolver(familyMemberSchema) as any,
     defaultValues: editingMember
@@ -117,7 +120,7 @@ if (initialMode === "spouse") {
           marriageDate: editingMember.marriageDate
             ? editingMember.marriageDate.split("T")[0]
             : "",
-          type: editingMember.type ?? "",
+          type: editingMember.type,
         }
       : {
           ...familyMemberDefaultValues,
@@ -128,7 +131,9 @@ if (initialMode === "spouse") {
         },
   });
 
-  form.setValue("type", "current");
+  if(!editingMember) {
+    form.setValue("type", "current");
+  }
 
   let relationWatch = form.watch("relation");
 
@@ -139,9 +144,7 @@ if (initialMode === "spouse") {
       } else {
         form.setValue("type", "current");
       }
-    } else {
-      form.setValue("type", "current");
-    }
+    } 
   }, [relationWatch]);
 
   useEffect(() => {
@@ -217,6 +220,9 @@ if (initialMode === "spouse") {
     }
 
     const derivedGender = getGenderFromRelation(relation);
+
+    console.log(values);
+    
 
     if (!editingMember) {
       const newMember: any = await createFamilyMember({

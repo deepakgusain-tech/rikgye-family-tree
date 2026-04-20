@@ -26,7 +26,6 @@ export function useFamilyTree(data: any) {
     const treeData = await getTreeData();
     setRoot(treeData.data);
     setMembers(treeData.members);
-    console.log({treeData});
   }
 
   const updateTree = useCallback((node: FamilyNode | null, id: string, updater: (n: FamilyNode) => FamilyNode): FamilyNode | null => {

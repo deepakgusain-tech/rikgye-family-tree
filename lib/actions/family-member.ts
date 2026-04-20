@@ -36,7 +36,7 @@ type FamilyNode = {
   name: string;
   gender?: string;
   birthYear?: number;
-  image?: string;   
+  image?: string;
   isAlive?: boolean;
   spouses: {
     id: string;
@@ -69,8 +69,8 @@ export async function createFamilyMember(data: Omit<any, "id">) {
   return await prisma.$transaction(async (tx) => {
     const existingMember = parentId
       ? await tx.familyMember.findUnique({
-          where: { id: parentId },
-        })
+        where: { id: parentId },
+      })
       : null;
 
     let parentToAssign: string | null = null;
@@ -174,7 +174,7 @@ export async function getFamilyMembers(): Promise<FamilyMemberTree[]> {
     spouseFather: m.spouseFather || undefined,
     spouseMother: m.spouseMother || undefined,
     profession: m.profession || undefined,
-    email: m.email || undefined, 
+    email: m.email || undefined,
     phone: m.phone || undefined,
     parentId: m.parentId || null,
     userId: m.userId,
@@ -209,17 +209,17 @@ export async function getTreeData() {
     data = result;
   }
 
- const members = await prisma.familyMember.findMany({
-  include: {
-    user: {
-      select: {
-        id: true,
-        level: true,
-        role: true,
+  const members = await prisma.familyMember.findMany({
+    include: {
+      user: {
+        select: {
+          id: true,
+          level: true,
+          role: true,
+        },
       },
     },
-  },
-});
+  });
 
   return {
     data,
@@ -281,7 +281,7 @@ export async function updateFamilyMember(data: any) {
     if (!member) {
       throw new Error("Member not found");
     }
-    
+
     // ✅ Existing spouse relation
     const existing = await tx.familyMember.findUnique({
       where: { id: data.id },
@@ -340,7 +340,7 @@ export async function updateFamilyMember(data: any) {
         email: data.email || null,
         phone: data.phone || null,
         relation: data.relation || null,
-        type: data.type || member.type,
+        type: data.type,
 
         parent: data.parentId
           ? { connect: { id: data.parentId } }
@@ -477,6 +477,7 @@ export async function buildFamilyTree(
         type: "current",
         birthYear: getBirthYear(m.spouse.birthDate),
         image: m.spouse.image?.[0] || "", // 🔥 ADD THIS
+        isAlive: m.isAlive
       });
     }
 
@@ -490,9 +491,10 @@ export async function buildFamilyTree(
           type: p.type || "ex",
           birthYear: getBirthYear(p.birthDate),
           image: p.image?.[0] || "", // 🔥 ADD THIS
+          isAlive: p.isAlive
         });
       }
-    }
+    }   
 
     // ✅ MAIN RETURN (MOST IMPORTANT FIX)
     return {

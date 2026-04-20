@@ -7,6 +7,9 @@ import { prisma } from '@/lib/db/prisma-helper'
 const FamilyPage = async () => {
 
   const { data, members } = await getTreeData();
+
+  console.log({data});
+  
   
   let currentUser: any = await auth();
 
